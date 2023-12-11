@@ -11,7 +11,7 @@ import numpy as np
 
 picam2 = Picamera2()
 picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": (320,240)}, transform = Transform(vflip=0,hflip=0)))
-picam2.set_controls({"Saturation": 0, 
+picam2.set_controls({"Saturation": 1, 
                      "AeEnable": False,
                      "AnalogueGain": 1,
                      "ExposureTime": 50000,
@@ -21,28 +21,34 @@ picam2.set_controls({"Saturation": 0,
 picam2.start()
 
 # Load the YOLOv8 model
-model = YOLO("/home/pi/EggCounter/models/eggs_YOLOv8n_128_07_12_2023.tflite")
+model = YOLO("/home/pi/EggCounter/models/eggs_YOLOv8n_128_11_12_2023.tflite")
 #model = YOLO("/home/pi/EggCounter/best_int8.tflite")
 
 # Open the video file
-#cap = cv2.VideoCapture("/home/pi/Videos/29-09-2023_11h35m44.avi")
 
     
 enter_zone_part = 0.65
 end_zone_part = 0.75
 
-def is_track_pass_board(track):
+def is_track_pass_board(track, horizontal = False):
     is_left_point_exist = 0
     is_right_point_exist = 0
     left_point_frame = 0
     right_point_frame = 0
 
+    if horizontal:
+        index = 1
+        criteria = height
+    else:
+        index = 0
+        criteria = width
+
     for i in range(len(track)):
         point = track[i]
-        if (point[0] < int(width * enter_zone_part)):
+        if (point[index] < int(criteria * enter_zone_part)):
             is_left_point_exist = 1
             left_point_frame = i
-        if (point[0] > int(width * end_zone_part)):
+        if (point[index] > int(criteria * end_zone_part)):
             is_right_point_exist = 1
             right_point_frame = i
 
@@ -67,12 +73,16 @@ def draw_enter_end_zones(cv_image,horizontal=False):
 
 track_history = defaultdict(lambda: [[], False])
 count = 0
-def update_tracks(results):
+def update_tracks(results, horizontal = False):
     global count
     if(results[0].boxes.id == None):
         return
     boxes = results[0].boxes.xywh.cpu()
     track_ids = results[0].boxes.id.int().cpu().tolist()
+    if horizontal:
+        criteria = height
+    else:
+        criteria = width
     for box, track_id in zip(boxes, track_ids):
         x, y, w, h = box
 
@@ -80,40 +90,58 @@ def update_tracks(results):
         track = track_C[0]
         is_counted = track_C[1]
         track.append((float(x), float(y)))  # x, y center point
-        if track[-1][0] > width * end_zone_part and is_counted == False:
-            if is_track_pass_board(track):
+        if track[-1][0] > criteria * end_zone_part and is_counted == False:
+            if is_track_pass_board(track, horizontal = horizontal):
                 count += 1
-                #is_counted = True
                 del track_history[track_id]
 
 def runserver():
     flask_server.app.run(debug=False, host="0.0.0.0")
+
+
+def insert_counted_toDB(): 
+    global count
+    last_count = 0
+    while True:
+        time.sleep(5) 
+        flask_server.insert(count - last_count)
+        last_count = count
+
 thrServer = threading.Thread(target = runserver)
 thrServer.start()
 
+thrInsert = threading.Thread(target = insert_counted_toDB)
+thrInsert.start()
+
+#cap = cv2.VideoCapture("/home/pi/Videos/29-09-2023_11h35m44.avi")
 i = 0
 while True:
     start = time.time()
     # Read a frame from the video
-   # success, frame = cap.read()
+    #success, frame = cap.read()
     frame = picam2.capture_array("main")
-
     width = frame.shape[1]
     height = frame.shape[0]
+    horizontal = True
     success = True
     if success:
         # Run YOLOv8 tracking on the frame, persisting tracks between frames
         with flask_server.lock: 
             results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml",verbose=False)
-            update_tracks(results)
-            annotated_frame = results[0].plot(labels=True, probs=False)
-            annotated_frame = draw_enter_end_zones(annotated_frame)
+            update_tracks(results,horizontal = horizontal)
+            annotated_frame = results[0].plot(labels=False)
+            annotated_frame = draw_enter_end_zones(annotated_frame, horizontal = horizontal)
+
         # Visualize the results on the frame
         if flask_server.frames_queue.qsize() < 10:
             flask_server.frames_queue.put_nowait(annotated_frame.copy())
 
+       
     print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
 
 # Release the video capture object and close the display window
+thrServer.join()
+thrInsert.join()
 cap.release()
 cv2.destroyAllWindows()
+
