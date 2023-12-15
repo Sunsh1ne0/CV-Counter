@@ -42,20 +42,23 @@ def generate_frames():
 def video_feed():
     return Response(stream_with_context(generate_frames()), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-def csv_select(date1):
-    cursor.execute("SELECT * FROM counted")
+def csv_select(dateFROM,dateTO):
+    print(dateFROM)
+    print(dateTO)
+    print(f"SELECT * FROM counted where datetime > datetime('{dateFROM}') AND datetime < datetime('{dateTO}')")
+    cursor.execute(f"SELECT * FROM counted where datetime > datetime('{dateFROM}') AND datetime < datetime('{dateTO}')")
     result = "Datetime, N\n"
     for row in cursor:
         result = result + f"{row[0]}, {row[1]}\n"
     yield result
 
-@app.route('/history/<date1>')
-def history_route(date1):
-    return Response(csv_select(date1), mimetype='text/csv')
+@app.route('/history/<dateFROM>/<dateTO>')
+def history_route(dateFROM,dateTO):
+    return Response(csv_select(dateFROM, dateTO), mimetype='text/csv')
         
 
 def insert(N):
-    cursor.execute(f"INSERT INTO counted VALUES(datetime('now'), {N})") 
+    cursor.execute(f"INSERT INTO counted VALUES(datetime('now', 'localtime'), {N})") 
     db.commit()
 
     
