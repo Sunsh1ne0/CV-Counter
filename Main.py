@@ -97,6 +97,11 @@ def update_tracks(results, horizontal = False):
                 count += 1
                 del track_history[track_id]
 
+def draw_count(cv_image):
+    return cv2.putText(cv_image, f"{count}", (30,30), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0,0,255), 
+                       2, cv2.LINE_AA)
+
 def runserver():
     flask_server.app.run(debug=False, host="0.0.0.0")
 
@@ -117,6 +122,7 @@ thrInsert.start()
 
 #cap = cv2.VideoCapture("/home/pi/Videos/29-09-2023_11h35m44.avi")
 i = 0
+
 while True:
     start = time.time()
     # Read a frame from the video
@@ -133,6 +139,7 @@ while True:
             update_tracks(results,horizontal = horizontal)
             annotated_frame = results[0].plot(labels=False)
             annotated_frame = draw_enter_end_zones(annotated_frame, horizontal = horizontal)
+            annotated_frame = draw_count(annotated_frame)
 
         # Visualize the results on the frame
         if flask_server.frames_queue.qsize() < 10:
