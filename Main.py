@@ -30,6 +30,18 @@ model = YOLO("/home/pi/EggCounter/models/eggs_YOLOv8n_128_11_12_2023.tflite")
 enter_zone_part = 0.65
 end_zone_part = 0.75
 
+def draw_enter_end_zones(cv_image,horizontal=False):
+        if horizontal:
+            cv_image = cv2.line(cv_image, (0, int(height*enter_zone_part)), (width, int(height*enter_zone_part)), (0,0,255), 1)
+            cv_image = cv2.line(cv_image, (0, int(height*end_zone_part)), (width, int(height*end_zone_part)), (0,0,255), 1)
+        else:
+            cv_image = cv2.line(cv_image, (int(width*enter_zone_part),0), (int(width*enter_zone_part),height), (0,0,255), 1)
+            cv_image = cv2.line(cv_image, (int(width*end_zone_part), 0), (int(width*end_zone_part), height), (0,0,255), 1)
+        return cv_image
+
+track_history = defaultdict(lambda: [[], False])
+count = 0
+
 def is_track_pass_board(track, horizontal = False):
     is_left_point_exist = 0
     is_right_point_exist = 0
@@ -62,17 +74,6 @@ def is_track_actual(track):
             return False
     return True
 
-def draw_enter_end_zones(cv_image,horizontal=False):
-        if horizontal:
-            cv_image = cv2.line(cv_image, (0, int(height*enter_zone_part)), (width, int(height*enter_zone_part)), (0,0,255), 1)
-            cv_image = cv2.line(cv_image, (0, int(height*end_zone_part)), (width, int(height*end_zone_part)), (0,0,255), 1)
-        else:
-            cv_image = cv2.line(cv_image, (int(width*enter_zone_part),0), (int(width*enter_zone_part),height), (0,0,255), 1)
-            cv_image = cv2.line(cv_image, (int(width*end_zone_part), 0), (int(width*end_zone_part), height), (0,0,255), 1)
-        return cv_image
-
-track_history = defaultdict(lambda: [[], False])
-count = 0
 def update_tracks(results, horizontal = False):
     global count
     if(results[0].boxes.id == None):
@@ -80,17 +81,18 @@ def update_tracks(results, horizontal = False):
     boxes = results[0].boxes.xywh.cpu()
     track_ids = results[0].boxes.id.int().cpu().tolist()
     if horizontal:
+        index = 1
         criteria = height
     else:
+        index = 0
         criteria = width
     for box, track_id in zip(boxes, track_ids):
         x, y, w, h = box
-
         track_C = track_history[track_id]
         track = track_C[0]
         is_counted = track_C[1]
         track.append((float(x), float(y)))  # x, y center point
-        if track[-1][0] > criteria * end_zone_part and is_counted == False:
+        if track[-1][index] > criteria * end_zone_part and is_counted == False:
             if is_track_pass_board(track, horizontal = horizontal):
                 count += 1
                 del track_history[track_id]
@@ -103,7 +105,7 @@ def insert_counted_toDB():
     global count
     last_count = 0
     while True:
-        time.sleep(5) 
+        time.sleep(60) 
         flask_server.insert(count - last_count)
         last_count = count
 
