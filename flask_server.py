@@ -43,19 +43,24 @@ def video_feed():
     return Response(stream_with_context(generate_frames()), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 def csv_select(dateFROM,dateTO):
-    print(dateFROM)
-    print(dateTO)
-    print(f"SELECT * FROM counted where datetime > datetime('{dateFROM}') AND datetime < datetime('{dateTO}')")
     cursor.execute(f"SELECT * FROM counted where datetime > datetime('{dateFROM}') AND datetime < datetime('{dateTO}')")
     result = "Datetime, N\n"
     for row in cursor:
         result = result + f"{row[0]}, {row[1]}\n"
     yield result
 
+def query_csv(date):
+    cursor.execute(f"SELECT sum(count) FROM counted where date(datetime) == date('{date}')")
+    rows = cursor.fetchall()
+    yield str(rows[0][0]) + "\n"
+
 @app.route('/history/<dateFROM>/<dateTO>')
 def history_route(dateFROM,dateTO):
     return Response(csv_select(dateFROM, dateTO), mimetype='text/csv')
         
+@app.route('/count/<date>')
+def count_route(date):
+    return Response(query_csv(date), mimetype='text/csv')
 
 def insert(N):
     cursor.execute(f"INSERT INTO counted VALUES(datetime('now', 'localtime'), {N})") 
