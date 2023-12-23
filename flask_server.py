@@ -44,7 +44,7 @@ def video_feed():
 
 def csv_select(dateFROM,dateTO):
     cursor.execute(f"SELECT * FROM counted where datetime > datetime('{dateFROM}') AND datetime < datetime('{dateTO}')")
-    result = "Datetime, N\n"
+    result = "sep=,\nDatetime, N\n"
     for row in cursor:
         result = result + f"{row[0]}, {row[1]}\n"
     yield result
