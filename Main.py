@@ -76,27 +76,28 @@ def is_track_actual(track):
 
 def update_tracks(results, horizontal = False):
     global count
-    if(results[0].boxes.id == None):
-        return
-    boxes = results[0].boxes.xywh.cpu()
-    track_ids = results[0].boxes.id.int().cpu().tolist()
-    if horizontal:
-        index = 1
-        criteria = height
+    if(results[0].boxes.id != None):
+        boxes = results[0].boxes.xywh.cpu()
+        track_ids = results[0].boxes.id.int().cpu().tolist()
+        if horizontal:
+            index = 1
+            criteria = height
+        else:
+            index = 0
+            criteria = width
+        for box, track_id in zip(boxes, track_ids):
+            x, y, w, h = box
+            track_C = track_history[track_id]
+            track = track_C[0]
+            is_counted = track_C[1]
+            track.append((float(x),float(y)))
+            if track[-1][index] > criteria * end_zone_part and is_counted == False:
+                if is_track_pass_board(track, horizontal = horizontal):
+                    count += 1
+                    track_C[1] = True
     else:
-        index = 0
-        criteria = width
-    for box, track_id in zip(boxes, track_ids):
-        x, y, w, h = box
-        track_C = track_history[track_id]
-        track = track_C[0]
-        is_counted = track_C[1]
-        track.append((float(x),float(y)))
-        if track[-1][index] > criteria * end_zone_part and is_counted == False:
-            if is_track_pass_board(track, horizontal = horizontal):
-                count += 1
-                track_C[1] = True
-  
+        track_ids = []
+
     ## clear lost
     keys = list(track_history.keys())
     for key in keys:
