@@ -8,6 +8,7 @@ import flask_server
 from libcamera import controls
 from collections import defaultdict 
 import numpy as np
+import TelemetryServer
 
 picam2 = Picamera2()
 picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": (320,240)}, transform = Transform(vflip=0,hflip=0)))
@@ -128,13 +129,17 @@ def draw_tracks(cv_image):
 def runserver():
     flask_server.app.run(debug=False, host="0.0.0.0")
 
-
 def insert_counted_toDB(): 
     global count
+    remoteTelemetry = TelemetryServer.TelemetryServer(host = "192.168.158.71",
+                                      port = "5673",
+                                      FarmId = "OfficeAgrobit",
+                                      LineId = 0)
     last_count = 0
     while True:
         time.sleep(60) 
         flask_server.insert(count - last_count)
+        remoteTelemetry.send_count(count - last_count)
         last_count = count
 
 thrServer = threading.Thread(target = runserver)
