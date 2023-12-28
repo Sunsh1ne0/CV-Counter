@@ -168,13 +168,13 @@ while True:
             annotated_frame = draw_tracks(frame)
             annotated_frame = draw_enter_end_zones(annotated_frame, horizontal = horizontal)
             annotated_frame = draw_count(annotated_frame)
+            print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
 
         # Visualize the results on the frame
         if flask_server.frames_queue.qsize() < 10:
             flask_server.frames_queue.put_nowait(annotated_frame.copy())
 
        
-    print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
 
 # Release the video capture object and close the display window
 thrServer.join()
