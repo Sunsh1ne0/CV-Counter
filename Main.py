@@ -1,6 +1,7 @@
 import cv2
 from ultralytics import YOLO
 import time
+import datetime
 from picamera2 import Picamera2
 from libcamera import Transform
 import threading
@@ -129,24 +130,41 @@ def draw_tracks(cv_image):
 def runserver():
     flask_server.app.run(debug=False, host="0.0.0.0")
 
+def saveImg(frame, FarmId, LineId, DateTime, folder = "/home/pi/EggCounter/frames/"):
+    strDateTime = datetime.datetime.fromtimestamp(DateTime).strftime('%Y-%m-%dT%H_%M_%S')
+    cv2.imwrite(folder + f"{strDateTime}_{FarmId}_{LineId}.jpg", frame)
+
+needSaveFrame = threading.Event()
+
 def insert_counted_toDB(): 
     global count
+    FarmId = "OfficeAgrobit"
+    LineId = 0
     remoteTelemetry = TelemetryServer.TelemetryServer(host = "192.168.158.71",
                                       port = "5673",
-                                      FarmId = "OfficeAgrobit",
-                                      LineId = 0)
+                                      FarmId = FarmId,
+                                      LineId = LineId)
     last_count = 0
     while True:
         time.sleep(60) 
+        print("clear")
+        needSaveFrame.clear()
+        print("wait")
+        needSaveFrame.wait()
+        
+        datetime = time.time()
         flask_server.insert(count - last_count)
-        remoteTelemetry.send_count(count - last_count)
+        remoteTelemetry.send_count(count - last_count, datetime)
+        saveImg(last_frame, FarmId, LineId, datetime)
         last_count = count
 
+saveImgLock = threading.Lock()
 thrServer = threading.Thread(target = runserver)
 thrServer.start()
 
 thrInsert = threading.Thread(target = insert_counted_toDB)
 thrInsert.start()
+
 
 #cap = cv2.VideoCapture("/home/pi/Videos/29-09-2023_11h35m44.avi")
 i = 0
@@ -168,6 +186,9 @@ while True:
             annotated_frame = draw_tracks(frame)
             annotated_frame = draw_enter_end_zones(annotated_frame, horizontal = horizontal)
             annotated_frame = draw_count(annotated_frame)
+            if not needSaveFrame.is_set():
+                last_frame = annotated_frame.copy()
+                needSaveFrame.set()
             print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
 
         # Visualize the results on the frame

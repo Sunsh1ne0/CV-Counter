@@ -1,5 +1,4 @@
 import pika
-import time
 
 class TelemetryServer():
     def __init__(self, host, port, FarmId, LineId, queue="eggsQueue"):
@@ -26,8 +25,8 @@ class TelemetryServer():
         except pika.exceptions.AMQPConnectionError as e:
             print("AMQP Connection Error:", e)     
 
-    def send_count(self, N ):
-        datetime = int(time.time())
+    def send_count(self, N, datetime ):
+        datetime = int(datetime)
         msg_string = f"{{\"timestamp\":{datetime}," + \
                    f"\"FarmId\" :\"{self.FarmId}\"," + \
                    f"\"LineId\" : {self.LineId}," + \
