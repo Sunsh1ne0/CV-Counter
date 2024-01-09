@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import os
 import time
+import datetime
 from flask import Flask, render_template, stream_with_context
 from threading import Thread, Lock
 from queue import Queue
@@ -62,8 +63,9 @@ def history_route(dateFROM,dateTO):
 def count_route(date):
     return Response(query_csv(date), mimetype='text/csv')
 
-def insert(N):
-    cursor.execute(f"INSERT INTO counted VALUES(datetime('now', 'localtime'), {N})") 
+def insert(dt,N):
+    strDateTime = datetime.datetime.fromtimestamp(dt).strftime('%Y-%m-%d %H:%M:%S')
+    cursor.execute(f"INSERT INTO counted VALUES('{strDateTime}', {N})") 
     db.commit()
 
     

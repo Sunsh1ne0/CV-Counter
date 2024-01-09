@@ -147,13 +147,11 @@ def insert_counted_toDB():
     last_count = 0
     while True:
         time.sleep(60) 
-        print("clear")
         needSaveFrame.clear()
-        print("wait")
         needSaveFrame.wait()
         
         datetime = time.time()
-        flask_server.insert(count - last_count)
+        flask_server.insert(datetime, count - last_count)
         remoteTelemetry.send_count(count - last_count, datetime)
         saveImg(last_frame, FarmId, LineId, datetime)
         last_count = count
