@@ -10,27 +10,7 @@ from libcamera import controls
 from collections import defaultdict 
 import numpy as np
 import TelemetryServer
-
-picam2 = Picamera2()
-picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": (320,240)}, transform = Transform(vflip=0,hflip=0)))
-picam2.set_controls({"Saturation": 1, 
-                     "AeEnable": False,
-                     "AnalogueGain": 1,
-                     "ExposureTime": 50000,
-                     "AwbEnable": False,
-                     "AwbMode": controls.AwbModeEnum.Indoor,
-                     "NoiseReductionMode" : controls.draft.NoiseReductionModeEnum.Off})
-picam2.start()
-
-# Load the YOLOv8 model
-model = YOLO("/home/pi/EggCounter/models/eggs_YOLOv8n_128_11_12_2023.tflite")
-#model = YOLO("/home/pi/EggCounter/best_int8.tflite")
-
-# Open the video file
-
-    
-enter_zone_part = 0.65
-end_zone_part = 0.75
+import yaml
 
 def draw_enter_end_zones(cv_image,horizontal=False):
         if horizontal:
@@ -134,70 +114,87 @@ def saveImg(frame, FarmId, LineId, DateTime, folder = "/home/pi/EggCounter/frame
     strDateTime = datetime.datetime.fromtimestamp(DateTime).strftime('%Y-%m-%dT%H_%M_%S')
     cv2.imwrite(folder + f"{strDateTime}_{FarmId}_{LineId}.jpg", frame)
 
-needSaveFrame = threading.Event()
 
 def insert_counted_toDB(): 
     global count
-    FarmId = "OfficeAgrobit"
-    LineId = 0
-    remoteTelemetry = TelemetryServer.TelemetryServer(host = "192.168.158.71",
-                                      port = "5673",
-                                      FarmId = FarmId,
-                                      LineId = LineId)
+    remoteTelemetry = TelemetryServer.TelemetryServer(host = config["server"]["hostname"],
+                                      port = config["server"]["port"],
+                                      FarmId = config["device"]["FarmId"],
+                                      LineId = config["device"]["LineId"])
     last_count = 0
     while True:
         time.sleep(60) 
         needSaveFrame.clear()
         needSaveFrame.wait()
-        
         datetime = time.time()
         flask_server.insert(datetime, count - last_count)
         remoteTelemetry.send_count(count - last_count, datetime)
         saveImg(last_frame, FarmId, LineId, datetime)
         last_count = count
 
-saveImgLock = threading.Lock()
-thrServer = threading.Thread(target = runserver)
-thrServer.start()
+def main_thread():
+    i = 0
+    while True:
+        start = time.time()
+        frame = picam2.capture_array("main")
+        width = frame.shape[1]
+        height = frame.shape[0]
+        horizontal = True
+        success = True
+        if success:
+            # Run YOLOv8 tracking on the frame, persisting tracks between frames
+            with flask_server.lock: 
+                results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml",verbose=False)
+                update_tracks(results,horizontal = horizontal)
+                annotated_frame = draw_tracks(frame)
+                annotated_frame = draw_enter_end_zones(annotated_frame, horizontal = horizontal)
+                annotated_frame = draw_count(annotated_frame)
+                if not needSaveFrame.is_set():
+                    last_frame = annotated_frame.copy()
+                    needSaveFrame.set()
+                print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
 
-thrInsert = threading.Thread(target = insert_counted_toDB)
-thrInsert.start()
+            # Visualize the results on the frame
+            if flask_server.frames_queue.qsize() < 10:
+                flask_server.frames_queue.put_nowait(annotated_frame.copy())
+           
 
 
-#cap = cv2.VideoCapture("/home/pi/Videos/29-09-2023_11h35m44.avi")
-i = 0
+def load_yaml_with_defaults(file_path):
+    with open(file_path, "r") as file:
+        config = yaml.safe_load(file)
+        return config
 
-while True:
-    start = time.time()
-    # Read a frame from the video
-    #success, frame = cap.read()
+if __name__ == "__main__":
+    config = load_yaml_with_defaults("config.yaml")
+    picam2 = Picamera2()
+    picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": (320,240)}, 
+                                                         transform = Transform(vflip=config["camera"]["vflip"],
+                                                                               hflip=config["camera"]["hflip"])))
+    picam2.set_controls({"Saturation": 1, 
+                         "AeEnable": config["camera"]["AeEnable"],
+                         "AnalogueGain": config["camera"]["analogueGain"],
+                         "ExposureTime": config["camera"]["ExposureTime"],
+                         "AwbEnable": False,
+                         "AwbMode": controls.AwbModeEnum.Indoor,
+                         "NoiseReductionMode" : controls.draft.NoiseReductionModeEnum.Off})
+    picam2.start()
     frame = picam2.capture_array("main")
     width = frame.shape[1]
     height = frame.shape[0]
-    horizontal = True
-    success = True
-    if success:
-        # Run YOLOv8 tracking on the frame, persisting tracks between frames
-        with flask_server.lock: 
-            results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml",verbose=False)
-            update_tracks(results,horizontal = horizontal)
-            annotated_frame = draw_tracks(frame)
-            annotated_frame = draw_enter_end_zones(annotated_frame, horizontal = horizontal)
-            annotated_frame = draw_count(annotated_frame)
-            if not needSaveFrame.is_set():
-                last_frame = annotated_frame.copy()
-                needSaveFrame.set()
-            print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
+    # Load the YOLOv8 model
+    model = YOLO(config["model"]["path"])
+    enter_zone_part = config["camera"]["enter_zone_part"]
+    end_zone_part = config["camera"]["end_zone_part"]
 
-        # Visualize the results on the frame
-        if flask_server.frames_queue.qsize() < 10:
-            flask_server.frames_queue.put_nowait(annotated_frame.copy())
+    needSaveFrame = threading.Event()
+    saveImgLock = threading.Lock()
+    thrServer = threading.Thread(target = runserver)
+    thrServer.start()
 
-       
+    thrInsert = threading.Thread(target = insert_counted_toDB)
+    thrInsert.start()
 
-# Release the video capture object and close the display window
-thrServer.join()
-thrInsert.join()
-cap.release()
-cv2.destroyAllWindows()
-
+    main_thread()
+    thrInsert.join()
+    thrServer.join()
