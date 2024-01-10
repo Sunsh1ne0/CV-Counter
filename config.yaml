@@ -1,0 +1,16 @@
+server:
+  hostname: '192.168.158.71'
+  port: '5673'
+device:
+  LineId: 0
+  FarmId: 'OfficeAgrobit'
+camera:
+  analogueGain: 1
+  ExposureTime: 50000
+  AeEnable: False
+  vflip: 0
+  hflip: 0
+  enter_zone_part: 0.65
+  end_zone_part: 0.75
+model:
+  path: '/home/pi/EggCounter/models/eggs_YOLOv8n_128_11_12_2023.tflite'
