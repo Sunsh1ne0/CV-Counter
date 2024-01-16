@@ -117,10 +117,13 @@ def saveImg(frame, FarmId, LineId, DateTime, folder = "/home/pi/EggCounter/frame
 
 def insert_counted_toDB(): 
     global count
+    global last_frame
+    FarmId = config["device"]["FarmId"]
+    LineId = config["device"]["LineId"]
     remoteTelemetry = TelemetryServer.TelemetryServer(host = config["server"]["hostname"],
                                       port = config["server"]["port"],
-                                      FarmId = config["device"]["FarmId"],
-                                      LineId = config["device"]["LineId"])
+                                      FarmId = FarmId,
+                                      LineId = LineId)
     last_count = 0
     while True:
         time.sleep(60) 
@@ -131,7 +134,6 @@ def insert_counted_toDB():
         remoteTelemetry.send_count(count - last_count, datetime)
         saveImg(last_frame, FarmId, LineId, datetime)
         last_count = count
-
 def main_thread():
     i = 0
     while True:
@@ -182,6 +184,7 @@ if __name__ == "__main__":
     frame = picam2.capture_array("main")
     width = frame.shape[1]
     height = frame.shape[0]
+    last_frame = frame.copy()
     # Load the YOLOv8 model
     model = YOLO(config["model"]["path"])
     enter_zone_part = config["camera"]["enter_zone_part"]
