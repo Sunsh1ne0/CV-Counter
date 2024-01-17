@@ -135,6 +135,7 @@ def insert_counted_toDB():
         saveImg(last_frame, FarmId, LineId, datetime)
         last_count = count
 def main_thread():
+    global last_frame
     i = 0
     while True:
         start = time.time()
