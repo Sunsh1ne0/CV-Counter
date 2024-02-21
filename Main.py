@@ -110,9 +110,12 @@ def draw_tracks(cv_image):
 def runserver():
     flask_server.app.run(debug=False, host="0.0.0.0")
 
-def saveImg(frame, FarmId, LineId, DateTime, folder = "/home/pi/EggCounter/frames/"):
-    strDateTime = datetime.datetime.fromtimestamp(DateTime).strftime('%Y-%m-%dT%H_%M_%S')
-    cv2.imwrite(folder + f"{strDateTime}_{FarmId}_{LineId}.jpg", frame)
+def saveImg(frame, FarmId, LineId, DateTime, 
+            folder = f"/home/pi/EggCounter/frames/{FarmId}/{LineId}/{datetime.today().strftime('%Y-%m-%d')}"):
+    if not os.path.exists(folder): 
+        os.makedirs(folder) 
+    strTime = datetime.datetime.fromtimestamp(DateTime).strftime('%H_%M_%S')
+    cv2.imwrite(folder + f"{stTime}.jpg", frame)
 
 
 def insert_counted_toDB(): 
