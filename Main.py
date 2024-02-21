@@ -1,4 +1,5 @@
 import cv2
+import os
 from ultralytics import YOLO
 import time
 import datetime
@@ -110,12 +111,13 @@ def draw_tracks(cv_image):
 def runserver():
     flask_server.app.run(debug=False, host="0.0.0.0")
 
-def saveImg(frame, FarmId, LineId, DateTime, 
-            folder = f"/home/pi/EggCounter/frames/{FarmId}/{LineId}/{datetime.today().strftime('%Y-%m-%d')}"):
+def saveImg(frame, FarmId, LineId, DateTime):
+    folder = f"/home/pi/EggCounter/frames/{FarmId}/{LineId}/{datetime.datetime.today().strftime('%Y-%m-%d')}"
     if not os.path.exists(folder): 
         os.makedirs(folder) 
+
     strTime = datetime.datetime.fromtimestamp(DateTime).strftime('%H_%M_%S')
-    cv2.imwrite(folder + f"{stTime}.jpg", frame)
+    cv2.imwrite(folder + f"/{strTime}.jpg", frame)
 
 
 def insert_counted_toDB(): 
@@ -133,10 +135,10 @@ def insert_counted_toDB():
         needSaveFrame.clear()
         needSaveFrame.wait()
         datetime = time.time()
-        flask_server.insert(datetime, count - last_count)
         remoteTelemetry.send_count(count - last_count, datetime)
         saveImg(last_frame, FarmId, LineId, datetime)
         last_count = count
+
 def main_thread():
     global last_frame
     i = 0
