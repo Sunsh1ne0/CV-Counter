@@ -163,7 +163,7 @@ def main_thread():
                 print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
 
             # Visualize the results on the frame
-            if flask_server.frames_queue.qsize() < 10:
+            if flask_server.frames_queue.qsize() == 0:
                 flask_server.frames_queue.put_nowait(annotated_frame.copy())
            
 

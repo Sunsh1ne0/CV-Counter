@@ -11,7 +11,7 @@ import localDB
 
 template_dir = os.path.abspath('./')
 app = Flask(__name__,template_folder=template_dir)
-frames_queue = Queue(maxsize=10)
+frames_queue = Queue(maxsize=1)
 count = 0
 fps = 0
 lock = Lock()
@@ -21,11 +21,12 @@ def index():
     return render_template('./index.html')
 
 def generate_frames():
+            encode_param = [cv2.IMWRITE_JPEG_QUALITY, 50]
             while True:
                 with lock: 
                     if frames_queue.qsize() > 0: 
                         frame = frames_queue.get()
-                        ret, buffer = cv2.imencode('.jpg', frame)
+                        ret, buffer = cv2.imencode('.jpg', frame, encode_param)
                         yield (b'--frame\r\n'
                     b'Content-Type: image/jpeg\r\n\r\n' + bytearray(buffer) + b'\r\n')
                     
