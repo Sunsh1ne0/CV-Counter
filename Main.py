@@ -12,6 +12,7 @@ from collections import defaultdict
 import numpy as np
 import TelemetryServer
 import yaml
+import localDB
 
 def draw_enter_end_zones(cv_image,horizontal=False):
         if horizontal:
@@ -23,7 +24,9 @@ def draw_enter_end_zones(cv_image,horizontal=False):
         return cv_image
 
 track_history = defaultdict(lambda: [[], False, 0])
-count = 0
+count = localDB.count_today()
+if count == None:
+    count = 0
 
 def is_track_pass_board(track, horizontal = False):
     is_left_point_exist = 0
