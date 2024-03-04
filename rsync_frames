@@ -1,0 +1,6 @@
+#!/bin/bash
+user='rsync_d1'
+ip=$(cat /home/pi/EggCounter/config.yaml | grep -E "hostname:" | sed "s/'//g" | awk '{print $NF}')
+destination='frames'
+source='/home/pi/EggCounter/frames/'
+rsync -avv --remove-source-files  $source $user@$ip::$destination
