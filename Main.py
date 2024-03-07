@@ -28,6 +28,7 @@ track_history = defaultdict(lambda: [[], False, 0])
 #last_count = count
 #if count == None:
 count = 0
+count_lock = threading.Lock()
 
 def is_track_pass_board(track, horizontal = False):
     is_left_point_exist = 0
@@ -80,7 +81,8 @@ def update_tracks(results, horizontal = False):
             track.append((float(x),float(y)))
             if track[-1][index] > criteria * end_zone_part and is_counted == False:
                 if is_track_pass_board(track, horizontal = horizontal):
-                    count += 1
+                    with count_lock:
+                        count += 1
                     track_C[1] = True
     else:
         track_ids = []
@@ -136,12 +138,15 @@ def insert_counted_toDB():
     last_count = 0 
     while True:
         time.sleep(60) 
+        with count_lock:
+            delta = count - last_count
+            last_count = count
+
         needSaveFrame.clear()
         needSaveFrame.wait()
         datetime = time.time()
-        remoteTelemetry.send_count(count - last_count, datetime)
+        remoteTelemetry.send_count(delta, datetime)
         saveImg(last_frame, FarmId, LineId, datetime)
-        last_count = count
 
 def main_thread():
     global last_frame
