@@ -24,9 +24,10 @@ def draw_enter_end_zones(cv_image,horizontal=False):
         return cv_image
 
 track_history = defaultdict(lambda: [[], False, 0])
-count = localDB.count_today()
-if count == None:
-    count = 0
+#count = localDB.count_today()
+#last_count = count
+#if count == None:
+count = 0
 
 def is_track_pass_board(track, horizontal = False):
     is_left_point_exist = 0
@@ -132,7 +133,7 @@ def insert_counted_toDB():
                                       port = config["server"]["port"],
                                       FarmId = FarmId,
                                       LineId = LineId)
-    last_count = 0
+    last_count = 0 
     while True:
         time.sleep(60) 
         needSaveFrame.clear()
@@ -147,7 +148,11 @@ def main_thread():
     i = 0
     while True:
         start = time.time()
-        frame = picam2.capture_array("main")
+        frame1 = picam2.capture_array("main")
+        width = frame1.shape[1]
+        height = frame1.shape[0]
+
+        frame = frame1[:int(height*0.8),:,:]
         width = frame.shape[1]
         height = frame.shape[0]
         horizontal = True
