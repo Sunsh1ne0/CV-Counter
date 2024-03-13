@@ -51,34 +51,40 @@ def insert_counted_toDB():
         remoteTelemetry.send_count(delta, datetime)
         saveImg(last_frame, FarmId, LineId, datetime)
 
+def crop(frame):
+    crop_x0, crop_x1, crop_y0,crop_y1 = config["camera"]["crop"]
+    h = frame.shape[0]
+    w = frame.shape[1]
+    x0 = int(crop_x0 * w)
+    x1 = int(crop_x1 * w)
+    y0 = int(crop_y0 * h)
+    y1 = int(crop_y1 * h)
+    out = frame[y0:y1,x0:x1,:]
+    return out
+
 def main_thread():
     global last_frame
     global count
     i = 0
     horizontal = True
 
-    frame1 = picam2.capture_array("main")
-    width = frame1.shape[1]
-    height = frame1.shape[0]
-        
-    frame = frame1[:int(height*0.8),:,:]
+    frame = picam2.capture_array("main")
+    frame = crop(frame)
     width = frame.shape[1]
     height = frame.shape[0]
-
-
+    horizontal = config["camera"]['horizontal']
     counter = Counter(enter_zone_part, end_zone_part, 
                       horizontal, height, width)
 
 
     while True:
         start = time.time()
-        frame1 = picam2.capture_array("main")
-        width = frame1.shape[1]
-        height = frame1.shape[0]
-        
-        frame = frame1[:int(height*0.8),:,:]
+        frame = picam2.capture_array("main")
+        frame = crop(frame)
         width = frame.shape[1]
         height = frame.shape[0]
+        
+
 
         # Run YOLOv8 tracking on the frame, persisting tracks between frames
         with flask_server.lock: 
@@ -118,19 +124,20 @@ if __name__ == "__main__":
                          "NoiseReductionMode" : controls.draft.NoiseReductionModeEnum.Off,
                          "FrameRate":60})
     picam2.start()
-
     frame = picam2.capture_array("main")
+
+    frame = crop(frame)
     width = frame.shape[1]
     height = frame.shape[0]
     last_frame = frame.copy()
-
+    count = 0
     # Load the YOLOv8 model
     model = YOLO(config["model"]["path"])
     enter_zone_part = config["camera"]["enter_zone_part"]
     end_zone_part = config["camera"]["end_zone_part"]
 
     needSaveFrame = threading.Event()
-    saveImgLock = threading.Lock()
+    count_lock = threading.Lock()
     thrServer = threading.Thread(target = runserver)
     thrServer.start()
 
