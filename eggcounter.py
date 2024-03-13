@@ -123,6 +123,7 @@ if __name__ == "__main__":
     width = frame.shape[1]
     height = frame.shape[0]
     last_frame = frame.copy()
+
     # Load the YOLOv8 model
     model = YOLO(config["model"]["path"])
     enter_zone_part = config["camera"]["enter_zone_part"]
