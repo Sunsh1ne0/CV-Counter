@@ -8,88 +8,15 @@ from libcamera import Transform
 import threading
 import flask_server
 from libcamera import controls
-from collections import defaultdict 
 import numpy as np
 import TelemetryServer
 import yaml
 import localDB
-
 import draw
+from counter import Counter
 
 
-track_history = defaultdict(lambda: [[], False, 0])
-count = 0
-count_lock = threading.Lock()
-
-def is_track_pass_board(track, horizontal = False):
-    is_left_point_exist = 0
-    is_right_point_exist = 0
-    left_point_frame = 0
-    right_point_frame = 0
-
-    if horizontal:
-        index = 1
-        criteria = height
-    else:
-        index = 0
-        criteria = width
-
-    for i in range(len(track)):
-        point = track[i]
-        if (point[index] < int(criteria * enter_zone_part)):
-            is_left_point_exist = 1
-            left_point_frame = i
-        if (point[index] > int(criteria * end_zone_part)):
-            is_right_point_exist = 1
-            right_point_frame = i
-
-    if (is_left_point_exist * is_right_point_exist == 1 and
-            left_point_frame < right_point_frame):
-        return True
-    return False
-
-def is_track_actual(track):
-    if (len(track) < 2):
-            return False
-    return True
-
-def update_tracks(results, horizontal = False):
-    global count
-    if(results[0].boxes.id != None):
-        boxes = results[0].boxes.xywh.cpu()
-        track_ids = results[0].boxes.id.int().cpu().tolist()
-        if horizontal:
-            index = 1
-            criteria = height
-        else:
-            index = 0
-            criteria = width
-        for box, track_id in zip(boxes, track_ids):
-            x, y, w, h = box
-            track_C = track_history[track_id]
-            track = track_C[0]
-            is_counted = track_C[1]
-            track.append((float(x),float(y)))
-            if track[-1][index] > criteria * end_zone_part and is_counted == False:
-                if is_track_pass_board(track, horizontal = horizontal):
-                    with count_lock:
-                        count += 1
-                    track_C[1] = True
-    else:
-        track_ids = []
-
-    ## clear lost
-    keys = list(track_history.keys())
-    for key in keys:
-        if not key in track_ids:
-            if( track_history[key][2] < 30):
-                track_history[key][2] += 1
-            else:
-                del track_history[key]
-            
        
-        
-
 def runserver():
     flask_server.app.run(debug=False, host="0.0.0.0")
 
@@ -126,24 +53,41 @@ def insert_counted_toDB():
 
 def main_thread():
     global last_frame
+    global count
     i = 0
+    horizontal = True
+
+    frame1 = picam2.capture_array("main")
+    width = frame1.shape[1]
+    height = frame1.shape[0]
+        
+    frame = frame1[:int(height*0.8),:,:]
+    width = frame.shape[1]
+    height = frame.shape[0]
+
+
+    counter = Counter(enter_zone_part, end_zone_part, 
+                      horizontal, height, width)
+
+
     while True:
         start = time.time()
         frame1 = picam2.capture_array("main")
         width = frame1.shape[1]
         height = frame1.shape[0]
-
+        
         frame = frame1[:int(height*0.8),:,:]
         width = frame.shape[1]
         height = frame.shape[0]
-        horizontal = True
 
         # Run YOLOv8 tracking on the frame, persisting tracks between frames
         with flask_server.lock: 
-            results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml",verbose=False)
-            update_tracks(results,horizontal = horizontal)
-            annotated_frame = draw.tracks(frame, track_history)
-            annotated_frame = draw.enter_end_zones(annotated_frame, enter_zone_part, end_zone_part, horizontal = horizontal)
+            results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml", verbose=False)
+            dCount = counter.update(results)
+            with count_lock:
+                count = count + dCount
+            annotated_frame = draw.tracks(frame, counter.track_history)
+            annotated_frame = draw.enter_end_zones(annotated_frame, enter_zone_part, end_zone_part, horizontal)
             annotated_frame = draw.count(annotated_frame, count)
             if not needSaveFrame.is_set():
                 last_frame = annotated_frame.copy()
@@ -174,6 +118,7 @@ if __name__ == "__main__":
                          "NoiseReductionMode" : controls.draft.NoiseReductionModeEnum.Off,
                          "FrameRate":60})
     picam2.start()
+
     frame = picam2.capture_array("main")
     width = frame.shape[1]
     height = frame.shape[0]
