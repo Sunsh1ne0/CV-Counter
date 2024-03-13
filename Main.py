@@ -14,19 +14,10 @@ import TelemetryServer
 import yaml
 import localDB
 
-def draw_enter_end_zones(cv_image,horizontal=False):
-        if horizontal:
-            cv_image = cv2.line(cv_image, (0, int(height*enter_zone_part)), (width, int(height*enter_zone_part)), (0,0,255), 1)
-            cv_image = cv2.line(cv_image, (0, int(height*end_zone_part)), (width, int(height*end_zone_part)), (0,0,255), 1)
-        else:
-            cv_image = cv2.line(cv_image, (int(width*enter_zone_part),0), (int(width*enter_zone_part),height), (0,0,255), 1)
-            cv_image = cv2.line(cv_image, (int(width*end_zone_part), 0), (int(width*end_zone_part), height), (0,0,255), 1)
-        return cv_image
+import draw
+
 
 track_history = defaultdict(lambda: [[], False, 0])
-#count = localDB.count_today()
-#last_count = count
-#if count == None:
 count = 0
 count_lock = threading.Lock()
 
@@ -96,22 +87,7 @@ def update_tracks(results, horizontal = False):
             else:
                 del track_history[key]
             
-        
-def draw_count(cv_image):
-    return cv2.putText(cv_image, f"{count}", (30,30), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 
-                       2, cv2.LINE_AA)
-
-def draw_tracks(cv_image): 
-    for key,values in track_history.items(): 
-        color = (0, 0, 255)
-        position = values[0][-1]
-        status = values[1]
-        if (status):
-            color = (0, 255, 0)
-        cv_image = cv2.circle(cv_image, (int(position[0]), int(position[1])), 0, color, 3) 
-    return cv_image
-        
+       
         
 
 def runserver():
@@ -161,26 +137,23 @@ def main_thread():
         width = frame.shape[1]
         height = frame.shape[0]
         horizontal = True
-        success = True
-        if success:
-            # Run YOLOv8 tracking on the frame, persisting tracks between frames
-            with flask_server.lock: 
-                results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml",verbose=False)
-                update_tracks(results,horizontal = horizontal)
-                annotated_frame = draw_tracks(frame)
-                annotated_frame = draw_enter_end_zones(annotated_frame, horizontal = horizontal)
-                annotated_frame = draw_count(annotated_frame)
-                if not needSaveFrame.is_set():
-                    last_frame = annotated_frame.copy()
-                    needSaveFrame.set()
-                print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
 
-            # Visualize the results on the frame
-            if flask_server.frames_queue.qsize() == 0:
-                flask_server.frames_queue.put_nowait(annotated_frame.copy())
+        # Run YOLOv8 tracking on the frame, persisting tracks between frames
+        with flask_server.lock: 
+            results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml",verbose=False)
+            update_tracks(results,horizontal = horizontal)
+            annotated_frame = draw.tracks(frame, track_history)
+            annotated_frame = draw.enter_end_zones(annotated_frame, enter_zone_part, end_zone_part, horizontal = horizontal)
+            annotated_frame = draw.count(annotated_frame, count)
+            if not needSaveFrame.is_set():
+                last_frame = annotated_frame.copy()
+                needSaveFrame.set()
+            print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
+
+        # Visualize the results on the frame
+        if flask_server.frames_queue.qsize() == 0:
+            flask_server.frames_queue.put_nowait(annotated_frame.copy())
            
-
-
 def load_yaml_with_defaults(file_path):
     with open(file_path, "r") as file:
         config = yaml.safe_load(file)
