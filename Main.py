@@ -198,7 +198,8 @@ if __name__ == "__main__":
                          "ExposureTime": config["camera"]["ExposureTime"],
                          "AwbEnable": False,
                          "AwbMode": controls.AwbModeEnum.Indoor,
-                         "NoiseReductionMode" : controls.draft.NoiseReductionModeEnum.Off})
+                         "NoiseReductionMode" : controls.draft.NoiseReductionModeEnum.Off,
+                         "FrameRate":60})
     picam2.start()
     frame = picam2.capture_array("main")
     width = frame.shape[1]
