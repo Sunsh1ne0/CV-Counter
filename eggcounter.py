@@ -95,6 +95,7 @@ def main_thread():
             annotated_frame = draw.tracks(frame, counter.track_history)
             annotated_frame = draw.enter_end_zones(annotated_frame, enter_zone_part, end_zone_part, horizontal)
             annotated_frame = draw.count(annotated_frame, count)
+            
             if not needSaveFrame.is_set():
                 last_frame = annotated_frame.copy()
                 needSaveFrame.set()
@@ -102,8 +103,11 @@ def main_thread():
 
         # Visualize the results on the frame
         if flask_server.frames_queue.qsize() == 0:
-            flask_server.frames_queue.put_nowait(annotated_frame.copy())
-           
+            flask_server.frames_queue.put_nowait(frame.copy())
+            
+        if flask_server.pts_queue.qsize() == 0:
+            flask_server.pts_queue.put_nowait(list(counter.last()))
+
 def load_yaml_with_defaults(file_path):
     with open(file_path, "r") as file:
         config = yaml.safe_load(file)
