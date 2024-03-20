@@ -18,7 +18,7 @@ from counter import Counter
 
        
 def runserver():
-    flask_server.app.run(debug=False, host="0.0.0.0")
+    flask_server.run()
 
 def saveImg(frame, FarmId, LineId, DateTime):
     folder = f"/home/pi/EggCounter/frames/{FarmId}/{LineId}/{datetime.datetime.today().strftime('%Y-%m-%d')}"
@@ -62,6 +62,10 @@ def crop(frame):
     out = frame[y0:y1,x0:x1,:]
     return out
 
+def check_thread_alive(thr):
+    thr.join(timeout=0.0)
+    return thr.is_alive()
+
 def main_thread():
     global last_frame
     global count
@@ -78,6 +82,8 @@ def main_thread():
 
 
     while True:
+        if check_thread_alive(thrServer) == False:
+            return
         start = time.time()
         frame = picam2.capture_array("main")
         frame = crop(frame)
@@ -142,12 +148,9 @@ if __name__ == "__main__":
 
     needSaveFrame = threading.Event()
     count_lock = threading.Lock()
-    thrServer = threading.Thread(target = runserver)
-    thrServer.start()
-
-    thrInsert = threading.Thread(target = insert_counted_toDB)
+    thrServer = threading.Thread(target = runserver, daemon=True)
+    thrInsert = threading.Thread(target = insert_counted_toDB,daemon=True)
+    
+    thrServer.start()    
     thrInsert.start()
-
     main_thread()
-    thrInsert.join()
-    thrServer.join()
