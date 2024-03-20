@@ -41,6 +41,17 @@ class Counter():
                 return False
         return True
 
+    def last(self):
+        states = []
+        pos = []
+        for key,values in self.track_history.items():
+            position = values[0][-1]
+            status = values[1]
+            states.append(status)
+            pos.append(position)
+        return states,pos
+
+
     def update(self, results):
         dcount = 0
         if(results[0].boxes.id != None):
