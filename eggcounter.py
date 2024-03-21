@@ -132,7 +132,7 @@ if __name__ == "__main__":
                          "AwbEnable": False,
                          "AwbMode": controls.AwbModeEnum.Indoor,
                          "NoiseReductionMode" : controls.draft.NoiseReductionModeEnum.Off,
-                         "FrameRate":60})
+                         "FrameRate":30})
     picam2.start()
     frame = picam2.capture_array("main")
 
@@ -142,7 +142,7 @@ if __name__ == "__main__":
     last_frame = frame.copy()
     count = 0
     # Load the YOLOv8 model
-    model = YOLO(config["model"]["path"])
+    model = YOLO('./models/model.tflite')
     enter_zone_part = config["camera"]["enter_zone_part"]
     end_zone_part = config["camera"]["end_zone_part"]
 

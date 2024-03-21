@@ -1,16 +1,20 @@
-server:
-  hostname: '192.168.158.71'
-  port: '5673'
-device:
-  LineId: 0
-  FarmId: 'OfficeAgrobit'
 camera:
+  AeEnable: 'true'
+  ExposureTime: 75000
   analogueGain: 1
-  ExposureTime: 50000
-  AeEnable: False
-  vflip: 0
-  hflip: 0
-  enter_zone_part: 0.65
+  crop:
+  - 0
+  - 1
+  - 0
+  - 1
   end_zone_part: 0.75
-model:
-  path: '/home/pi/EggCounter/models/eggs_YOLOv8n_128_11_12_2023.tflite'
+  enter_zone_part: 0.65
+  hflip: 0
+  horizontal: true
+  vflip: 0
+device:
+  FarmId: OfficeAgrobit
+  LineId: 0
+server:
+  hostname: 192.168.158.72
+  port: '5673'

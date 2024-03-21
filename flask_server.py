@@ -14,8 +14,6 @@ import sys
 from werkzeug.serving import run_simple
 
 
-
-
 def load_yaml_with_defaults(file_path):
     with open(file_path, "r") as file:
         config = yaml.safe_load(file)
@@ -28,6 +26,7 @@ pts_queue = Queue(maxsize=1)
 count = 0
 fps = 0
 lock = Lock()
+lock_stream = Lock()
 config = load_yaml_with_defaults('config.yaml')
 
 @app.route('/')
