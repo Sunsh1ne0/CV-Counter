@@ -19,8 +19,8 @@ def load_yaml_with_defaults(file_path):
         config = yaml.safe_load(file)
         return config
 
-template_dir = os.path.abspath('./')
-app = Flask(__name__,template_folder=template_dir)
+template_dir = os.path.abspath('./front/')
+app = Flask(__name__, template_folder=template_dir, static_folder=template_dir)
 frames_queue = Queue(maxsize=1)
 pts_queue = Queue(maxsize=1)
 count = 0
