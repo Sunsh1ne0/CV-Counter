@@ -1,5 +1,5 @@
 camera:
-  AeEnable: 'true'
+  AeEnable: true
   ExposureTime: 75000
   analogueGain: 1
   crop:
