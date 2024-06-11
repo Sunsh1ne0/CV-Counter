@@ -178,7 +178,13 @@
             
         </div>
         <button id="saveSettingsButton" class="settingsButton" onclick="applySettings()">Сохранить</button>
-    </div>    
+    </div>
+    <div>
+        <!-- <button onclick="disconnect()">Отключиться</button> -->
+        <form method="post" action="/disconnect">
+            <input type="submit" value="Disconnect" name="Disconnect" />
+        </form>
+    </div>     
 </div>
 </div>
 

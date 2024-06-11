@@ -1,5 +1,6 @@
 import cv2
 import os
+# os.environ['MPLCONFIGDIR'] = os.getcwd() + "/configs/"
 from ultralytics import YOLO
 import time
 import datetime
@@ -40,7 +41,7 @@ def insert_counted_toDB():
                                       LineId = LineId)
     last_count = 0 
     while True:
-        time.sleep(60) 
+        time.sleep(1) 
         with count_lock:
             delta = count - last_count
             last_count = count
@@ -71,6 +72,7 @@ def main_thread():
     global count
     i = 0
     horizontal = True
+    frame_number = 0
 
     frame = picam2.capture_array("main")
     frame = crop(frame)
@@ -94,25 +96,30 @@ def main_thread():
 
         # Run YOLOv8 tracking on the frame, persisting tracks between frames
         with flask_server.lock: 
+            # start_time = time.time()
             results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml", verbose=False)
-            dCount = counter.update(results)
+            # print(f"time: {time.time() - start_time}")
+            dCount = counter.update(results, frame_number)
             with count_lock:
                 count = count + dCount
-            annotated_frame = draw.tracks(frame, counter.track_history)
+            annotated_frame = draw.tracks(frame, counter.eggs)
             annotated_frame = draw.enter_end_zones(annotated_frame, enter_zone_part, end_zone_part, horizontal)
             annotated_frame = draw.count(annotated_frame, count)
+            frame_number += 1
             
             if not needSaveFrame.is_set():
                 last_frame = annotated_frame.copy()
                 needSaveFrame.set()
             print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
-
+        
+        
         # Visualize the results on the frame
         if flask_server.frames_queue.qsize() == 0:
             flask_server.frames_queue.put_nowait(frame.copy())
             
         if flask_server.pts_queue.qsize() == 0:
-            flask_server.pts_queue.put_nowait(list(counter.last()))
+            flask_server.pts_queue.put_nowait(list(counter.last_new()))
+        
 
 def load_yaml_with_defaults(file_path):
     with open(file_path, "r") as file:
@@ -132,7 +139,7 @@ if __name__ == "__main__":
                          "AwbEnable": False,
                          "AwbMode": controls.AwbModeEnum.Indoor,
                          "NoiseReductionMode" : controls.draft.NoiseReductionModeEnum.Off,
-                         "FrameRate":30})
+                         "FrameRate":60})
     picam2.start()
     frame = picam2.capture_array("main")
 
@@ -153,4 +160,5 @@ if __name__ == "__main__":
     
     thrServer.start()    
     thrInsert.start()
+
     main_thread()

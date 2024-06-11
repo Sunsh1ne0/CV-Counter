@@ -16,12 +16,11 @@ def count(cv_image, count):
                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 
                        2, cv2.LINE_AA)
 
-def tracks(cv_image, tracks): 
-    for key,values in tracks.items(): 
+def tracks(cv_image, eggs): 
+    for _,egg in eggs.items(): 
         color = (0, 0, 255)
-        position = values[0][-1]
-        status = values[1]
-        if (status):
+        if (egg.counted):
             color = (0, 255, 0)
-        cv_image = cv2.circle(cv_image, (int(position[0]), int(position[1])), 0, color, 3) 
+        position = (int(egg.position[0]), int(egg.position[1]))
+        cv_image = cv2.circle(cv_image, position, 0, color, 3) 
     return cv_image

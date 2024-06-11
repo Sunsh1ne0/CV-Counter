@@ -1,0 +1,20 @@
+camera:
+  AeEnable: true
+  ExposureTime: 75000
+  analogueGain: 1
+  crop:
+  - 0
+  - 1
+  - 0
+  - 1
+  end_zone_part: 0.55
+  enter_zone_part: 0.45
+  hflip: false
+  horizontal: true
+  vflip: true
+device:
+  FarmId: OfficeAgrobit
+  LineId: 0
+server:
+  hostname: 87.229.212.47
+  port: '80'

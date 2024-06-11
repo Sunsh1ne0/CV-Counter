@@ -265,3 +265,26 @@ function updateCropInputValues() {
 
 updateCropInputValues();
 
+function disconnect() {
+    const jsonData = JSON.stringify('Disconnect');
+
+    fetch('/disconnect', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: jsonData
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка при отключении');
+            }
+            console.log('Успешно разъединено');
+        })
+        .catch(error => {
+            console.error('Ошибка при отключении:', error);
+        });
+    // setTimeout(function () {
+    //     window.location.reload(true);
+    // }, 1000);
+}

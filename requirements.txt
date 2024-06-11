@@ -1,0 +1,11 @@
+opencv-python
+ultralytics
+pika
+lapx
+tensorflow
+
+sudo apt-get update
+sudo apt-get install -y libhdf5-dev
+pip install --upgrade pip setuptools wheel --break-system-packages
+pip install tensorflow --break-system-packages
+--break-system-packages
