@@ -108,7 +108,7 @@ def main_thread():
             frame_number += 1
             
             if not needSaveFrame.is_set():
-                last_frame = annotated_frame.copy()
+                last_frame = frame.copy()
                 needSaveFrame.set()
             print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
         
