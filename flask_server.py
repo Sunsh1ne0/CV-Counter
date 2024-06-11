@@ -2,8 +2,6 @@ from flask import Response, request, session, redirect, url_for
 import cv2
 import numpy as np
 import os
-import time, threading
-import datetime
 from flask import Flask, render_template, stream_with_context
 from threading import Thread, Lock
 from queue import Queue
@@ -13,13 +11,10 @@ import json
 import sys
 from werkzeug.serving import run_simple
 
-
 def load_yaml_with_defaults(file_path):
     with open(file_path, "r") as file:
         config = yaml.safe_load(file)
         return config
-
-
 
 template_dir = os.path.abspath('./front/')
 app = Flask(__name__, template_folder=template_dir, static_folder=template_dir)
@@ -34,7 +29,6 @@ config = load_yaml_with_defaults('config.yaml')
 app.secret_key = b'_5#y2L"F4Q8z\n\xec]/'
 
 current_sessions = []
-
 
 @app.route('/')
 def index():
