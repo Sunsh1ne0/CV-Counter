@@ -2,6 +2,7 @@ sudo apt-get update
 sudo apt install cmake
 
 sudo apt-get install -y libhdf5-dev
+sudo apt install libcamera-dev
 
 pip3 install --only-binary h5py h5py
 

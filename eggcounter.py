@@ -115,7 +115,7 @@ def main_thread():
         
         # Visualize the results on the frame
         if flask_server.frames_queue.qsize() == 0:
-            flask_server.frames_queue.put_nowait(frame.copy())
+            flask_server.frames_queue.put_nowait(annotated_frame.copy())
             
         if flask_server.pts_queue.qsize() == 0:
             flask_server.pts_queue.put_nowait(list(counter.last_new()))
