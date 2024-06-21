@@ -156,5 +156,9 @@ def count_route(date):
 def count_td():
     return Response(str(localDB.count_today()) + "\n", mimetype='text/csv')
 
-def run():
+def run(framesQ, ptsQ):
+    global frames_queue
+    global pts_queue
+    frames_queue = framesQ
+    pts_queue = ptsQ
     app.run('0.0.0.0',5000)
