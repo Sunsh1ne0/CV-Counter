@@ -17,10 +17,11 @@ def count(cv_image, count):
                        2, cv2.LINE_AA)
 
 def tracks(cv_image, eggs): 
+    _image = cv_image.copy()
     for _,egg in eggs.items(): 
         color = (0, 0, 255)
         if (egg.counted):
             color = (0, 255, 0)
         position = (int(egg.position[0]), int(egg.position[1]))
-        cv_image = cv2.circle(cv_image, position, 0, color, 3) 
-    return cv_image
+        _image = cv2.circle(_image, position, 0, color, 3) 
+    return _image
