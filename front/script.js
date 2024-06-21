@@ -14,8 +14,8 @@ function drawPoints(coords, states) {
         pts_old[0].parentNode.removeChild(pts_old[0]);
     }
 
-    const scaleFactorX = container.offsetWidth / 320;
-    const scaleFactorY = container.offsetHeight / 240;
+    const scaleFactorX = container.offsetWidth / 640;
+    const scaleFactorY = container.offsetHeight / 480;
 
     coords.forEach((coord, index) => {
         const point = document.createElement('div');

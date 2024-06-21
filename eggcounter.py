@@ -127,9 +127,10 @@ def load_yaml_with_defaults(file_path):
         return config
 
 if __name__ == "__main__":
+    os.system("pinctrl FAN_PWM op dl")
     config = load_yaml_with_defaults("config.yaml")
     picam2 = Picamera2()
-    picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": (320,240)}, 
+    picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": (640, 480)}, 
                                                          transform = Transform(vflip=config["camera"]["vflip"],
                                                                                hflip=config["camera"]["hflip"])))
     picam2.set_controls({"Saturation": 1, 
