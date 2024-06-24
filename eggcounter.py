@@ -29,6 +29,7 @@ def saveImg(frame, FarmId, LineId, DateTime):
     cv2.imwrite(folder + f"/{strTime}.jpg", frame)
 
 
+
 def insert_counted_toDB(): 
     global count
     global last_frame
