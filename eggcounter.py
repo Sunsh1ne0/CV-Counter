@@ -16,6 +16,7 @@ import yaml
 import localDB
 import draw
 from counter import Counter
+import signal
        
 def runserver(QueueF, QueueP):
     flask_server.run(QueueF, QueueP)
@@ -29,7 +30,6 @@ def saveImg(frame, FarmId, LineId, DateTime):
     cv2.imwrite(folder + f"/{strTime}.jpg", frame)
 
 
-
 def insert_counted_toDB(): 
     global count
     global last_frame
@@ -41,7 +41,10 @@ def insert_counted_toDB():
                                       LineId = LineId)
     last_count = 0 
     while True:
-        time.sleep(1) 
+        if event.is_set():
+            os.kill(os.getpid(), signal.SIGINT)
+            return
+        time.sleep(20) 
         with count_lock:
             delta = count - last_count
             last_count = count
@@ -84,8 +87,10 @@ def main_thread():
 
 
     while True:
-        # if check_thread_alive(thrServer) == False:
-        #     return
+        if procServer.is_alive() == False:
+            global thrInsert
+            event.set()
+            return
         start = time.time()
         frame = picam2.capture_array("main")
         frame = crop(frame)
@@ -125,10 +130,10 @@ def load_yaml_with_defaults(file_path):
         return config
 
 if __name__ == "__main__":
-    os.system("pinctrl FAN_PWM op dl")
+    os.system('pinctrl FAN_PWM op dl')
     config = load_yaml_with_defaults("config.yaml")
     picam2 = Picamera2()
-    picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": (640,480)}, 
+    picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": config["camera"]["resolution"]}, 
                                                          transform = Transform(vflip=config["camera"]["vflip"],
                                                                                hflip=config["camera"]["hflip"])))
     picam2.set_controls({"Saturation": 1, 
@@ -138,7 +143,7 @@ if __name__ == "__main__":
                          "AwbEnable": False,
                          "AwbMode": controls.AwbModeEnum.Indoor,
                          "NoiseReductionMode" : controls.draft.NoiseReductionModeEnum.Off,
-                         "FrameRate":60})
+                         "FrameRate": config["camera"]["fps"]})
     picam2.start()
     frame = picam2.capture_array("main")
 
@@ -153,6 +158,7 @@ if __name__ == "__main__":
     end_zone_part = config["camera"]["end_zone_part"]
 
     needSaveFrame = threading.Event()
+    event = threading.Event()
     count_lock = threading.Lock()
     # thrServer = threading.Thread(target = runserver, daemon=True)
     thrInsert = threading.Thread(target = insert_counted_toDB,daemon=True)

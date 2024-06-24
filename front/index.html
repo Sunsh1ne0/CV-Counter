@@ -54,6 +54,19 @@
         <div id="cameraSettings" class="settingsGroup">
         <h3>Настройки камеры:</h3>
         <div class="inputContainer">
+            <div>
+                <div class="tooltip">
+                    <label for="ExposureTime">Разрешение камеры:</label>
+                    <span class="tooltiptext">Разрешение камеры и FPS.</span>
+                </div>
+                <select class="inputField" id="resolution" name="resolutionSelection">
+                    <option disabled>Выберите разрешение</option>
+                    <option value="640 x 480 p60">640 x 480 p60</option>
+                    <option value="640 x 480 p90">640 x 480 p90</option>
+                    <option value="1296 x 972 p42">1296 x 972 p42</option>
+                    <option value="2592 x 1944 p15">2592 x 1944 p15</option>
+                </select>
+            </div>
             <div class="inputField">
                 <div class="tooltip">
                     <label for="analogueGain">Чувствительность камеры:</label>

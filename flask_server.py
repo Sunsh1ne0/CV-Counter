@@ -94,12 +94,14 @@ stopServer = 0
 def upload_file():
     global stopServer
     new_config = request.get_json()
-    os.system("cp config.yaml config.yaml.bac")
-    ### TODO добавить валидацию json
-    with open("config.yaml","w") as f:
-        yaml.dump(new_config,f)
-    stopServer = 1
-    return jsonify({ "success": True, "message": "Server is restarting" })
+    if new_config != None:
+        os.system("cp config.yaml config.yaml.bac")
+        ### TODO добавить валидацию json
+        with open("config.yaml","w") as f:
+            yaml.dump(new_config,f)
+        stopServer = 1
+        return jsonify({ "success": True, "message": "Server is restarting" })
+    return jsonify({ "success": False, "message": "Server is restarting" })
 
 @app.route('/disconnect', methods=['POST'])
 def disconnect():
