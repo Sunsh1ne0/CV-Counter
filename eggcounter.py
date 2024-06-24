@@ -92,7 +92,7 @@ def main_thread():
         height = frame.shape[0]
         
         # Run YOLOv8 tracking on the frame, persisting tracks between frames
-        with flask_server.lock: 
+        # with flask_server.lock: 
             # start_time = time.time()
         results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml", verbose=False)
         # print(f"time: {time.time() - start_time}")
