@@ -1,6 +1,5 @@
 import cv2
 import os
-# os.environ['MPLCONFIGDIR'] = os.getcwd() + "/configs/"
 from ultralytics import YOLO
 import time
 import datetime
@@ -10,13 +9,10 @@ import threading
 from multiprocessing import Process, Queue
 import flask_server
 from libcamera import controls
-import numpy as np
 import TelemetryServer
 import yaml
-import localDB
 import draw
 from counter import Counter
-import signal
        
 def runserver(QueueF, QueueP):
     flask_server.run(QueueF, QueueP)
@@ -41,9 +37,6 @@ def insert_counted_toDB():
                                       LineId = LineId)
     last_count = 0 
     while True:
-        if event.is_set():
-            os.kill(os.getpid(), signal.SIGINT)
-            return
         time.sleep(20) 
         with count_lock:
             delta = count - last_count
@@ -88,9 +81,7 @@ def main_thread():
 
     while True:
         if procServer.is_alive() == False:
-            global thrInsert
-            event.set()
-            return
+            os._exit(0)
         start = time.time()
         frame = picam2.capture_array("main")
         frame = crop(frame)
@@ -98,10 +89,8 @@ def main_thread():
         height = frame.shape[0]
         
         # Run YOLOv8 tracking on the frame, persisting tracks between frames
-        # with flask_server.lock: 
-            # start_time = time.time()
         results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml", verbose=False)
-        # print(f"time: {time.time() - start_time}")
+
         dCount = counter.update(results, frame_number)
         with count_lock:
             count = count + dCount
@@ -114,7 +103,6 @@ def main_thread():
             last_frame = frame.copy()
             needSaveFrame.set()
         print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
-        
         
         # Visualize the results on the frame
         if qFrames.qsize() == 0:

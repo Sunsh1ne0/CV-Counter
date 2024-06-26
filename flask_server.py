@@ -1,15 +1,12 @@
 from flask import Response, request, session, redirect, url_for
 import cv2
-import numpy as np
 import os
 from flask import Flask, render_template, stream_with_context
-from threading import Thread, Lock
+from threading import Lock
 from queue import Queue
 import localDB
 import yaml
 import json
-import sys
-from werkzeug.serving import run_simple
 
 def load_yaml_with_defaults(file_path):
     with open(file_path, "r") as file:
