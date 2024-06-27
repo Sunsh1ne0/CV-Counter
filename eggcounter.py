@@ -11,7 +11,7 @@ import flask_server
 from libcamera import controls
 import TelemetryServer
 import yaml
-import draw
+from draw import Draw
 from counter import Counter
        
 def runserver(QueueF, QueueP):
@@ -66,19 +66,19 @@ def check_thread_alive(thr):
 def main_thread():
     global last_frame
     global count
-    i = 0
-    horizontal = True
+    # i = 0
+    # horizontal = True
     frame_number = 0
 
     frame = picam2.capture_array("main")
     frame = crop(frame)
     width = frame.shape[1]
     height = frame.shape[0]
-    horizontal = config["camera"]['horizontal']
     counter = Counter(enter_zone_part, end_zone_part, 
                       horizontal, height, width)
-
-
+    
+    draw = Draw(config["camera"]["resolution"], enter_zone_part, end_zone_part, horizontal)
+    
     while True:
         if procServer.is_alive() == False:
             os._exit(0)
@@ -94,9 +94,10 @@ def main_thread():
         dCount = counter.update(results, frame_number)
         with count_lock:
             count = count + dCount
-        annotated_frame = draw.tracks(frame, counter.eggs)
-        annotated_frame = draw.enter_end_zones(annotated_frame, enter_zone_part, end_zone_part, horizontal)
-        annotated_frame = draw.count(annotated_frame, count)
+        # annotated_frame = draw.tracks(frame.copy(), counter.eggs)
+        # annotated_frame = draw.lines(annotated_frame)
+        # annotated_frame = draw.count(annotated_frame, count)
+        annotated_frame = draw.process(frame, counter.eggs, count)
         frame_number += 1
         
         if not needSaveFrame.is_set():
@@ -120,8 +121,15 @@ def load_yaml_with_defaults(file_path):
 if __name__ == "__main__":
     os.system('pinctrl FAN_PWM op dl')
     config = load_yaml_with_defaults("config.yaml")
+    
+    # Getting data from config.yaml
+    horizontal = config["camera"]['horizontal']
+    enter_zone_part = config["camera"]["enter_zone_part"]
+    end_zone_part = config["camera"]["end_zone_part"]
+    resolution = config["camera"]["resolution"]
+
     picam2 = Picamera2()
-    picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": config["camera"]["resolution"]}, 
+    picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": resolution}, 
                                                          transform = Transform(vflip=config["camera"]["vflip"],
                                                                                hflip=config["camera"]["hflip"])))
     picam2.set_controls({"Saturation": 1, 
@@ -142,8 +150,7 @@ if __name__ == "__main__":
     count = 0
     # Load the YOLOv8 model
     model = YOLO('./models/model.tflite')
-    enter_zone_part = config["camera"]["enter_zone_part"]
-    end_zone_part = config["camera"]["end_zone_part"]
+
 
     needSaveFrame = threading.Event()
     event = threading.Event()
