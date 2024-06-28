@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Egg Counter Agrobit</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', path='/css/styles.css') }}">
+</head>
+<body>
+<div id="container">
+    <div id="streamContainer">
+        <div id="frame"></div>
+        <div class="fabricName"><h2>Фабрика: {{FarmId}} Корпус: {{LineId}}</h2></div>
+        <div id="datetimeContainer">
+            <span id="currentDateTime"></span></p>
+        </div>
+    </div>
+    <div id="settingsContainer">
+        <button class="settingsButton" onclick="toggleSettings()">Настройки</button>
+        <div id="serverSettings" class="settingsGroup">
+            <h3>Настройки сервера:</h3>
+                <div class="inputContainer">
+                    <div class="inputField">
+                        <div class="tooltip">
+                            <label for="FarmId">Название фабрики:</label>
+                            <span class="tooltiptext">Название фабрики</span>
+                        </div>
+                        <input type="text" id="FarmId">
+                    </div>
+                    <div class="inputField">
+                        <div class="tooltip">
+                            <label for="LineId">Номер корпуса:</label>
+                            <span class="tooltiptext">Номер корпуса</span>
+                        </div>
+                        <input type="text" id="LineId">
+                    </div>
+                    <div class="inputField">
+                        <div class="tooltip">
+                            <label for="Host">IPv4 адрес сервера:</label>
+                            <span class="tooltiptext">IPv4 адрес сервера сбора телеметрии</span>
+                        </div>
+                        <input type="text" id="Host">
+                    </div>
+                    <div class="inputField">
+                        <div class="tooltip">
+                            <label for="Port">Порт сервера:</label>
+                            <span class="tooltiptext">Порт сервера сбора телеметрии. Диапазон: [0:65535]</span>
+                        </div>
+                        <input type="text" id="Port">
+                    </div>
+                </div>
+            </div>
+            
+        <div id="cameraSettings" class="settingsGroup">
+        <h3>Настройки камеры:</h3>
+        <div class="inputContainer">
+            <div>
+                <div class="tooltip">
+                    <label for="ExposureTime">Разрешение камеры:</label>
+                    <span class="tooltiptext">Разрешение камеры и FPS.</span>
+                </div>
+                <select class="inputField" id="resolution" name="resolutionSelection">
+                    <option disabled>Выберите разрешение</option>
+                    <option value="640 x 480 p60">640 x 480 p60</option>
+                    <option value="640 x 480 p90">640 x 480 p90</option>
+                    <option value="1296 x 972 p42">1296 x 972 p42</option>
+                    <option value="2592 x 1944 p15">2592 x 1944 p15</option>
+                </select>
+            </div>
+            <div class="inputField">
+                <div class="tooltip">
+                    <label for="analogueGain">Чувствительность камеры:</label>
+                    <span class="tooltiptext">Чувствительность камеры. При больших значениях будут шумы на изображении. Диапазон: [1 - 10]</span>
+                </div>
+                <input type="range" id="analogueGain" min="1" max="10" oninput="analogueGainValue(this.value)">
+                <span id="analogueGainValue">1</span>
+            </div>
+            <div class="inputField">
+                <div class="tooltip">
+                    <label for="ExposureTime">Время экспозиции камеры:</label>
+                    <span class="tooltiptext">Время экспозиции камеры. Диапазон: [20000 - 150000]</span>
+                </div>
+                <input type="range" id="ExposureTime" min="20000" max="150000" oninput="exposureTimeValue(this.value)">
+                <span id="exposureTimeValue">20000</span>
+            </div>
+            <div class="inputField">
+                <div class="tooltip">
+                    <label for="AeEnable">Автоэкспозиция камеры:</label>
+                    <span class="tooltiptext">Разрешить автоэкспозицию камеры. Диапазон: [Да - Нет]</span>
+                </div>
+                    <span>Нет</span>
+                    <label class="switch">
+                        <input type="checkbox" id="AeEnable" class="checkbox">
+                        <span class="slider round"></span>
+                    </label>
+                    <span>Да</span>
+            </div>
+            <div class="inputField">
+                <div class="tooltip">
+                    <label for="vflip">Флип по вертикали:</label>
+                    <span class="tooltiptext">Флип изображения по вертикали. Диапазон: [Да - Нет]</span>
+                </div>
+                    <span>Нет</span>
+                    <label class="switch">
+                        <input type="checkbox" id="vflip" class="checkbox">
+                        <span class="slider round"></span>
+                    </label>
+                    <span>Да</span>
+            </div>
+            <div class="inputField">
+                <div class="tooltip">
+                    <label for="hflip">Флип по горизонтали:</label>
+                    <span class="tooltiptext">Флип изображения по горизонтали. Диапазон: [Да - Нет]</span>
+                </div>
+                    <span>Нет</span>
+                    <label class="switch">
+                        <input type="checkbox" id="hflip" class="checkbox">
+                        <span class="slider round"></span>
+                    </label>
+                    <span>Да</span>
+            </div>
+            <div class="inputField">
+                <div class="tooltip">
+                    <label for="enter_zone_part">Начало буферной зоны:</label>
+                    <span class="tooltiptext">Начало буферной зоны. Отсчитывается от обрезанного изображения. Диапазон: [0 - 1]</span>
+                </div>
+                <input type="range" id="enter_zone_part" min="0" max="1" step="0.01" value="0">
+                <span id="enter_zone_part_value">0</span>
+            </div>
+            <div class="inputField">
+                <div class="tooltip">
+                    <label for="end_zone_part">Конец буферной зоны:</label>
+                    <span class="tooltiptext">Конец буферной зоны. Отсчитывается от обрезанного изображения. Диапазон: [0 - 1]</span>
+                </div>
+                <input type="range" id="end_zone_part" min="0" max="1" step="0.01" value="0">
+                <span id="end_zone_part_value">0</span>
+            </div>
+            <div class="inputField">
+                <div class="tooltip">
+                    <label for="horizontal">Направление подсчета:</label>
+                    <span class="tooltiptext">Вести подсчет по горизонтали или вертикали. [ по горизонтали - по вертикали]</span>
+                </div>
+                <span>Гориз.</span>
+                <label class="switch">
+                    <input type="checkbox" id="horizontal" class="checkbox">
+                    <span class="slider round"></span>
+                </label>
+                <span>Вертик.</span>
+            </div>
+            <h3>Обрезать изображение:</h3>
+            <div class="inputField">
+                <div class="tooltip">
+                    <span class="tooltiptext">Обрезать изображение по рамке  Диапазон: [0 - 1] - [x_слева, x_справа, y_сверху, y_снизу]</span>
+                </div>
+                <div class="cropInputs">
+                    <div class="inputField">
+                        <div class="tooltip">
+                            <label for="cropLeft">Обрезка X-слева:</label>
+                            <span class="tooltiptext">Обрезка X-слева</span>
+                        </div>
+                        <input type="range" id="cropLeft" class="crop-point-input" min="0" max="1" step="0.01" value="0">
+                        <span id="cropLeftValue">0</span>
+                    </div>
+                    <div class="inputField">
+                        <div class="tooltip">
+                            <label for="cropRight">Обрезка X-справа:</label>
+                            <span class="tooltiptext">Обрезка X-справа</span>
+                        </div>
+                        <input type="range" id="cropRight" class="crop-point-input" min="0" max="1" step="0.01" value="1">
+                        <span id="cropRightValue">1</span>
+                    </div>
+                    <div class="inputField">
+                        <div class="tooltip">
+                            <label for="cropTop">Обрезка Y-сверху:</label>
+                            <span class="tooltiptext">Обрезка Y-сверху</span>
+                        </div>
+                        <input type="range" id="cropTop" class="crop-point-input" min="0" max="1" step="0.01" value="0">
+                        <span id="cropTopValue">0</span>
+                    </div>
+                    <div class="inputField">
+                        <div class="tooltip">
+                            <label for="cropBottom">Обрезка Y-снизу:</label>
+                            <span class="tooltiptext">Обрезка Y-снизу</span>
+                        </div>
+                        <input type="range" id="cropBottom" class="crop-point-input" min="0" max="1" step="0.01" value="1">
+                        <span id="cropBottomValue">1</span>
+                    </div>
+                </div>
+                
+            </div>
+            
+        </div>
+        <button id="saveSettingsButton" class="settingsButton" onclick="applySettings()">Сохранить</button>
+    </div>
+    <div>
+        <!-- <button onclick="disconnect()">Отключиться</button> -->
+        <form method="post" action="/disconnect">
+            <input type="submit" value="Disconnect" name="Disconnect" />
+        </form>
+    </div>     
+</div>
+</div>
+
+<script src="{{ url_for('static', path='/js/script.js') }}"></script>
+</body>
+</html>

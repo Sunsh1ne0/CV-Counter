@@ -8,7 +8,8 @@ from picamera2 import Picamera2
 from libcamera import Transform
 import threading
 from multiprocessing import Process, Queue
-import flask_server
+# import flask_server
+import fastapi_server
 from libcamera import controls
 import numpy as np
 import TelemetryServer
@@ -19,14 +20,16 @@ from counter import Counter
 import signal
        
 def runserver(QueueF, QueueP):
-    flask_server.run(QueueF, QueueP)
+    # flask_server.run(QueueF, QueueP)
+    fastapi_server.run(QueueF, QueueP)
 
 def saveImg(frame, FarmId, LineId, DateTime):
-    folder = f"/home/pi/EggCounter/frames/{FarmId}/{LineId}/{datetime.datetime.today().strftime('%Y-%m-%d')}"
+    folder = f"/home/pi/frames/{datetime.datetime.today().strftime('%Y-%m-%d')}"
     if not os.path.exists(folder): 
         os.makedirs(folder) 
 
     strTime = datetime.datetime.fromtimestamp(DateTime).strftime('%H_%M_%S')
+    print(strTime + '\n')
     cv2.imwrite(folder + f"/{strTime}.jpg", frame)
 
 
@@ -44,7 +47,7 @@ def insert_counted_toDB():
         if event.is_set():
             os.kill(os.getpid(), signal.SIGINT)
             return
-        time.sleep(20) 
+        input()
         with count_lock:
             delta = count - last_count
             last_count = count
@@ -66,10 +69,6 @@ def crop(frame):
     out = frame[y0:y1,x0:x1,:]
     return out
 
-def check_thread_alive(thr):
-    thr.join(timeout=0.0)
-    return thr.is_alive()
-
 def main_thread():
     global last_frame
     global count
@@ -88,14 +87,14 @@ def main_thread():
 
     while True:
         if procServer.is_alive() == False:
-            global thrInsert
-            event.set()
+            os._exit(0)
             return
         start = time.time()
         frame = picam2.capture_array("main")
         frame = crop(frame)
         width = frame.shape[1]
         height = frame.shape[0]
+        
         
         # Run YOLOv8 tracking on the frame, persisting tracks between frames
         # with flask_server.lock: 
@@ -113,8 +112,6 @@ def main_thread():
         if not needSaveFrame.is_set():
             last_frame = frame.copy()
             needSaveFrame.set()
-        print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
-        
         
         # Visualize the results on the frame
         if qFrames.qsize() == 0:
@@ -122,6 +119,10 @@ def main_thread():
             
         if qPoints.qsize() == 0:
             qPoints.put_nowait(list(counter.last_new()))
+        # print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
+        # input(f"waiting, {frame_number}")
+        # saveImg(frame, 0, 0, time.time())
+        
         
 
 def load_yaml_with_defaults(file_path):

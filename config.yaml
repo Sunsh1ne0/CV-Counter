@@ -9,12 +9,12 @@ camera:
   - 1
   end_zone_part: 0.55
   enter_zone_part: 0.45
-  fps: 60
+  fps: 42
   hflip: false
   horizontal: true
   resolution:
-  - 640
-  - 420
+  - 1296
+  - 972
   vflip: true
 device:
   FarmId: OfficeAgrobit
