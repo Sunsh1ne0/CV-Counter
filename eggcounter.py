@@ -1,6 +1,5 @@
 import cv2
 import os
-# os.environ['MPLCONFIGDIR'] = os.getcwd() + "/configs/"
 from ultralytics import YOLO
 import time
 import datetime
@@ -11,13 +10,10 @@ from multiprocessing import Process, Queue
 # import flask_server
 import fastapi_server
 from libcamera import controls
-import numpy as np
 import TelemetryServer
 import yaml
-import localDB
-import draw
+from draw import Draw
 from counter import Counter
-import signal
        
 def runserver(QueueF, QueueP):
     # flask_server.run(QueueF, QueueP)
@@ -44,10 +40,7 @@ def insert_counted_toDB():
                                       LineId = LineId)
     last_count = 0 
     while True:
-        if event.is_set():
-            os.kill(os.getpid(), signal.SIGINT)
-            return
-        input()
+        time.sleep(20) 
         with count_lock:
             delta = count - last_count
             last_count = count
@@ -72,23 +65,20 @@ def crop(frame):
 def main_thread():
     global last_frame
     global count
-    i = 0
-    horizontal = True
     frame_number = 0
 
     frame = picam2.capture_array("main")
     frame = crop(frame)
     width = frame.shape[1]
     height = frame.shape[0]
-    horizontal = config["camera"]['horizontal']
     counter = Counter(enter_zone_part, end_zone_part, 
                       horizontal, height, width)
-
-
+    
+    draw = Draw(resolution, enter_zone_part, end_zone_part, horizontal)
+    
     while True:
         if procServer.is_alive() == False:
             os._exit(0)
-            return
         start = time.time()
         frame = picam2.capture_array("main")
         frame = crop(frame)
@@ -97,21 +87,19 @@ def main_thread():
         
         
         # Run YOLOv8 tracking on the frame, persisting tracks between frames
-        # with flask_server.lock: 
-            # start_time = time.time()
         results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml", verbose=False)
-        # print(f"time: {time.time() - start_time}")
+
         dCount = counter.update(results, frame_number)
         with count_lock:
             count = count + dCount
-        annotated_frame = draw.tracks(frame, counter.eggs)
-        annotated_frame = draw.enter_end_zones(annotated_frame, enter_zone_part, end_zone_part, horizontal)
-        annotated_frame = draw.count(annotated_frame, count)
+
+        annotated_frame = draw.process(frame, counter.eggs, count)
         frame_number += 1
         
         if not needSaveFrame.is_set():
             last_frame = frame.copy()
             needSaveFrame.set()
+        print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
         
         # Visualize the results on the frame
         if qFrames.qsize() == 0:
@@ -133,8 +121,15 @@ def load_yaml_with_defaults(file_path):
 if __name__ == "__main__":
     os.system('pinctrl FAN_PWM op dl')
     config = load_yaml_with_defaults("config.yaml")
+    
+    # Getting data from config.yaml
+    horizontal = config["camera"]['horizontal']
+    enter_zone_part = config["camera"]["enter_zone_part"]
+    end_zone_part = config["camera"]["end_zone_part"]
+    resolution = config["camera"]["resolution"]
+
     picam2 = Picamera2()
-    picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": config["camera"]["resolution"]}, 
+    picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": resolution}, 
                                                          transform = Transform(vflip=config["camera"]["vflip"],
                                                                                hflip=config["camera"]["hflip"])))
     picam2.set_controls({"Saturation": 1, 
@@ -155,13 +150,11 @@ if __name__ == "__main__":
     count = 0
     # Load the YOLOv8 model
     model = YOLO('./models/model.tflite')
-    enter_zone_part = config["camera"]["enter_zone_part"]
-    end_zone_part = config["camera"]["end_zone_part"]
+
 
     needSaveFrame = threading.Event()
     event = threading.Event()
     count_lock = threading.Lock()
-    # thrServer = threading.Thread(target = runserver, daemon=True)
     thrInsert = threading.Thread(target = insert_counted_toDB,daemon=True)
 
     qFrames = Queue(maxsize=1)
