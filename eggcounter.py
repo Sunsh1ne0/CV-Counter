@@ -59,15 +59,10 @@ def crop(frame):
     out = frame[y0:y1,x0:x1,:]
     return out
 
-def check_thread_alive(thr):
-    thr.join(timeout=0.0)
-    return thr.is_alive()
 
 def main_thread():
     global last_frame
     global count
-    # i = 0
-    # horizontal = True
     frame_number = 0
 
     frame = picam2.capture_array("main")
@@ -77,7 +72,7 @@ def main_thread():
     counter = Counter(enter_zone_part, end_zone_part, 
                       horizontal, height, width)
     
-    draw = Draw(config["camera"]["resolution"], enter_zone_part, end_zone_part, horizontal)
+    draw = Draw(resolution, enter_zone_part, end_zone_part, horizontal)
     
     while True:
         if procServer.is_alive() == False:
@@ -94,9 +89,7 @@ def main_thread():
         dCount = counter.update(results, frame_number)
         with count_lock:
             count = count + dCount
-        # annotated_frame = draw.tracks(frame.copy(), counter.eggs)
-        # annotated_frame = draw.lines(annotated_frame)
-        # annotated_frame = draw.count(annotated_frame, count)
+
         annotated_frame = draw.process(frame, counter.eggs, count)
         frame_number += 1
         
@@ -155,7 +148,6 @@ if __name__ == "__main__":
     needSaveFrame = threading.Event()
     event = threading.Event()
     count_lock = threading.Lock()
-    # thrServer = threading.Thread(target = runserver, daemon=True)
     thrInsert = threading.Thread(target = insert_counted_toDB,daemon=True)
 
     qFrames = Queue(maxsize=1)
