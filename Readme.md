@@ -1,14 +1,11 @@
 # EggCounter soft
-Репозиторий с софтом, который запускается на счетчике.
+Software for the CV eggcounter based on YOLOV8n model.
 
 ## Installation
 
 1. Clone the repository
-2. Настройте файл конфигурации ```config.yaml```
-3. ```sudo ./intall_unit.sh``` будет добавлен демон и запущен. Он будет запускаться при каждом включении устройства. 
+2. Run ```sudo requirements_installation.sh``` to download all the necessary packages and libraries.
+3. Run the ```sudo ./intall_unit.sh``` to add daemon service.
+4. Open the 127.0.0.1:8000 webpage to configure the device.
 
-Для ребута использовать ```sudo service eggcounter stop```.
-Для остановки использовать ```sudo service eggcounter start```. 
-
-## Документация
-1.  [API](/docs/API.md)
+Use ```sudo service eggcounter restart``` to restart the service.
