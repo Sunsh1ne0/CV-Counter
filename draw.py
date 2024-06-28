@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 
 class Draw:
     def __init__(self, resolution, enter_zone_part, end_zone_part, horizontal=False) -> None:
@@ -31,7 +32,15 @@ class Draw:
             cv_image = cv2.circle(cv_image, position, self.scale, color, self.scale+2) 
         return cv_image
     
-    def process(self, cv_image, eggs, count, tracks_f:bool = True, lines_f:bool = True, count_f:bool = True):
+    def boxes(self,cv_image, results):
+        boxes = results.boxes.xyxy.cpu().numpy().astype(np.int32)
+        color = (0,0,255)
+        for box in boxes:
+            x1, y1, x2, y2 = box
+            cv2.rectangle(cv_image, (x1, y1), (x2, y2), color, self.scale + 1)
+        return cv_image
+    
+    def process(self, cv_image, eggs, count, results, tracks_f:bool = True, lines_f:bool = True, count_f:bool = True, boxes_f:bool = False):
         _image = cv_image.copy()
         if tracks_f:
             _image = self.tracks(_image, eggs)
@@ -39,5 +48,7 @@ class Draw:
             _image = self.lines(_image)
         if count_f:
             _image = self.count(_image, count)
+        if boxes_f:
+            _image = self.count(_image, results)
         return _image
 
