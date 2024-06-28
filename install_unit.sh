@@ -14,7 +14,7 @@ Description = "Egg counter service"
 Type = simple
 WorkingDirectory=/home/pi/EggCounter
 User=pi
-ExecStart=/usr/bin/python3 /home/pi/EggCounter/eggcounter.py
+ExecStart=/home/pi/EggCounter/.venv/bin/python3 /home/pi/EggCounter/eggcounter.py
 Restart=always
 
 [Install]

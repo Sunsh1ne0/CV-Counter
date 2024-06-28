@@ -33,9 +33,9 @@ class Draw:
         return cv_image
     
     def boxes(self,cv_image, results):
-        boxes = results.boxes.xyxy.cpu().numpy().astype(np.int32)
+        _boxes = results[0].boxes.xyxy.cpu().numpy().astype(np.int32)
         color = (0,0,255)
-        for box in boxes:
+        for box in _boxes:
             x1, y1, x2, y2 = box
             cv2.rectangle(cv_image, (x1, y1), (x2, y2), color, self.scale + 1)
         return cv_image
@@ -49,6 +49,6 @@ class Draw:
         if count_f:
             _image = self.count(_image, count)
         if boxes_f:
-            _image = self.count(_image, results)
+            _image = self.boxes(_image, results)
         return _image
 

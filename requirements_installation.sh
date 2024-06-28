@@ -30,5 +30,8 @@ sudo apt-get install -y libhdf5-dev
 # Set the PYTHON_KEYRING_BACKEND environment variable
 export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
 
+# Install python-prctl
+sudo apt-get install libcap-dev python3-setuptools
+
 # Install dependencies using Poetry
 poetry install

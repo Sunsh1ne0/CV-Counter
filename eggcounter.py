@@ -93,7 +93,7 @@ def main_thread():
         with count_lock:
             count = count + dCount
 
-        annotated_frame = draw.process(frame, counter.eggs, count)
+        annotated_frame = draw.process(frame, counter.eggs, count, results)
         frame_number += 1
         
         if not needSaveFrame.is_set():

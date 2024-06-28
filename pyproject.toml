@@ -16,6 +16,7 @@ rpi-libcamera = "^0.1a5"
 rpi-kms = "^0.1a1"
 pika = "^1.3.2"
 tensorflow = "^2.16.1"
+lapx = "^0.5.9.post1"
 
 
 [build-system]
