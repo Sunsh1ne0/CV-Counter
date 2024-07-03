@@ -41,7 +41,7 @@ class Draw:
         return cv_image
     
     def process(self, cv_image, eggs, count, results, tracks_f:bool = True, lines_f:bool = True, count_f:bool = True, boxes_f:bool = False):
-        _image = cv_image.copy()
+        _image = cv_image
         if tracks_f:
             _image = self.tracks(_image, eggs)
         if lines_f:

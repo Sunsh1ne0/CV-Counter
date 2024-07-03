@@ -7,7 +7,6 @@ from picamera2 import Picamera2
 from libcamera import Transform
 import threading
 from multiprocessing import Process, Queue
-# import flask_server
 import fastapi_server
 from libcamera import controls
 import TelemetryServer
@@ -84,7 +83,11 @@ def main_thread():
         frame = crop(frame)
         width = frame.shape[1]
         height = frame.shape[0]
-        
+
+        # Saving current frame
+        if not needSaveFrame.is_set():
+            last_frame = frame.copy()
+            needSaveFrame.set()
         
         # Run YOLOv8 tracking on the frame, persisting tracks between frames
         results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml", verbose=False)
@@ -96,23 +99,16 @@ def main_thread():
         annotated_frame = draw.process(frame, counter.eggs, count, results)
         frame_number += 1
         
-        if not needSaveFrame.is_set():
-            last_frame = frame.copy()
-            needSaveFrame.set()
         print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
         
         # Visualize the results on the frame
         if qFrames.qsize() == 0:
-            qFrames.put_nowait(annotated_frame.copy())
+            qFrames.put_nowait(annotated_frame)
             
         if qPoints.qsize() == 0:
             qPoints.put_nowait(list(counter.last_new()))
-        # print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
-        # input(f"waiting, {frame_number}")
-        # saveImg(frame, 0, 0, time.time())
         
         
-
 def load_yaml_with_defaults(file_path):
     with open(file_path, "r") as file:
         config = yaml.safe_load(file)
@@ -161,8 +157,7 @@ if __name__ == "__main__":
     qPoints = Queue(maxsize=1)
 
     procServer = Process(target = runserver, args = (qFrames, qPoints), daemon=True)
-    
-    # thrServer.start()    
+     
     procServer.start()
     thrInsert.start()
 
