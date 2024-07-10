@@ -9,16 +9,12 @@ camera:
   - 1
   end_zone_part: 0.55
   enter_zone_part: 0.45
-  fps: 42
   hflip: false
   horizontal: true
-  resolution:
-  - 1296
-  - 972
   vflip: true
 device:
   FarmId: OfficeAgrobit
   LineId: 0
 server:
-  hostname: 192.168.158.59
-  port: '5673'
+  hostname: 87.229.212.47
+  port: '80'

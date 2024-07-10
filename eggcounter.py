@@ -6,26 +6,25 @@ import datetime
 from picamera2 import Picamera2
 from libcamera import Transform
 import threading
-import flask_server
+from multiprocessing import Process, Queue
+import fastapi_server
 from libcamera import controls
-import numpy as np
 import TelemetryServer
 import yaml
-import localDB
-import draw
+from draw import Draw
 from counter import Counter
-
-
        
-def runserver():
-    flask_server.run()
+def runserver(QueueF, QueueP):
+    # flask_server.run(QueueF, QueueP)
+    fastapi_server.run(QueueF, QueueP)
 
 def saveImg(frame, FarmId, LineId, DateTime):
-    folder = f"/home/pi/EggCounter/frames/{FarmId}/{LineId}/{datetime.datetime.today().strftime('%Y-%m-%d')}"
+    folder = f"/home/pi/frames/{datetime.datetime.today().strftime('%Y-%m-%d')}"
     if not os.path.exists(folder): 
         os.makedirs(folder) 
 
     strTime = datetime.datetime.fromtimestamp(DateTime).strftime('%H_%M_%S')
+    print(strTime + '\n')
     cv2.imwrite(folder + f"/{strTime}.jpg", frame)
 
 
@@ -40,7 +39,7 @@ def insert_counted_toDB():
                                       LineId = LineId)
     last_count = 0 
     while True:
-        time.sleep(60) 
+        time.sleep(20) 
         with count_lock:
             delta = count - last_count
             last_count = count
@@ -62,67 +61,71 @@ def crop(frame):
     out = frame[y0:y1,x0:x1,:]
     return out
 
-def check_thread_alive(thr):
-    thr.join(timeout=0.0)
-    return thr.is_alive()
-
 def main_thread():
     global last_frame
     global count
-    i = 0
-    horizontal = True
+    frame_number = 0
 
     frame = picam2.capture_array("main")
     frame = crop(frame)
     width = frame.shape[1]
     height = frame.shape[0]
-    horizontal = config["camera"]['horizontal']
     counter = Counter(enter_zone_part, end_zone_part, 
                       horizontal, height, width)
-
-
+    
+    draw = Draw(resolution, enter_zone_part, end_zone_part, horizontal)
+    
     while True:
-        if check_thread_alive(thrServer) == False:
-            return
+        if procServer.is_alive() == False:
+            os._exit(0)
         start = time.time()
         frame = picam2.capture_array("main")
         frame = crop(frame)
         width = frame.shape[1]
         height = frame.shape[0]
+
+        # Saving current frame
+        if not needSaveFrame.is_set():
+            last_frame = frame.copy()
+            needSaveFrame.set()
         
-
-
         # Run YOLOv8 tracking on the frame, persisting tracks between frames
-        with flask_server.lock: 
-            results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml", verbose=False)
-            dCount = counter.update(results)
-            with count_lock:
-                count = count + dCount
-            annotated_frame = draw.tracks(frame, counter.track_history)
-            annotated_frame = draw.enter_end_zones(annotated_frame, enter_zone_part, end_zone_part, horizontal)
-            annotated_frame = draw.count(annotated_frame, count)
-            
-            if not needSaveFrame.is_set():
-                last_frame = annotated_frame.copy()
-                needSaveFrame.set()
-            print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
+        results = model.track(frame, persist=True, imgsz=128, tracker="tracker.yaml", verbose=False)
 
+        dCount = counter.update(results, frame_number)
+        with count_lock:
+            count = count + dCount
+
+        annotated_frame = draw.process(frame, counter.eggs, count, results)
+        frame_number += 1
+        
+        print(f"fps = {(1/(time.time() - start)):.2f} EGGS = {count}",end='\r')
+        
         # Visualize the results on the frame
-        if flask_server.frames_queue.qsize() == 0:
-            flask_server.frames_queue.put_nowait(frame.copy())
+        if qFrames.qsize() == 0:
+            qFrames.put_nowait(annotated_frame)
             
-        if flask_server.pts_queue.qsize() == 0:
-            flask_server.pts_queue.put_nowait(list(counter.last()))
-
+        if qPoints.qsize() == 0:
+            qPoints.put_nowait(list(counter.last_new()))
+        
+        
 def load_yaml_with_defaults(file_path):
     with open(file_path, "r") as file:
         config = yaml.safe_load(file)
         return config
 
 if __name__ == "__main__":
+    os.system('pinctrl FAN_PWM op dl')
     config = load_yaml_with_defaults("config.yaml")
+    
+    # Getting data from config.yaml
+    horizontal = config["camera"]['horizontal']
+    enter_zone_part = config["camera"]["enter_zone_part"]
+    end_zone_part = config["camera"]["end_zone_part"]
+    resolution = config["camera"]["resolution"]
+
     picam2 = Picamera2()
-    picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": (320,240)}, 
+    picam2.configure(picam2.create_preview_configuration(main={"format": 'RGB888', "size": resolution}, 
                                                          transform = Transform(vflip=config["camera"]["vflip"],
                                                                                hflip=config["camera"]["hflip"])))
     picam2.set_controls({"Saturation": 1, 
@@ -132,7 +135,7 @@ if __name__ == "__main__":
                          "AwbEnable": False,
                          "AwbMode": controls.AwbModeEnum.Indoor,
                          "NoiseReductionMode" : controls.draft.NoiseReductionModeEnum.Off,
-                         "FrameRate":30})
+                         "FrameRate": config["camera"]["fps"]})
     picam2.start()
     frame = picam2.capture_array("main")
 
@@ -143,14 +146,19 @@ if __name__ == "__main__":
     count = 0
     # Load the YOLOv8 model
     model = YOLO('./models/model.tflite')
-    enter_zone_part = config["camera"]["enter_zone_part"]
-    end_zone_part = config["camera"]["end_zone_part"]
+
 
     needSaveFrame = threading.Event()
+    event = threading.Event()
     count_lock = threading.Lock()
-    thrServer = threading.Thread(target = runserver, daemon=True)
     thrInsert = threading.Thread(target = insert_counted_toDB,daemon=True)
-    
-    thrServer.start()    
+
+    qFrames = Queue(maxsize=1)
+    qPoints = Queue(maxsize=1)
+
+    procServer = Process(target = runserver, args = (qFrames, qPoints), daemon=True)
+     
+    procServer.start()
     thrInsert.start()
+
     main_thread()

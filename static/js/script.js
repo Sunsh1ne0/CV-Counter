@@ -1,11 +1,18 @@
 const img = new Image();
 let frameCount = 0;
 
+let resolutions =  {"640 x 480 p60":  {"x": 640, "y": 480, 'fps': 60},
+                    "640 x 480 p90":  {"x": 640, "y": 480, 'fps': 90},
+                    "1296 x 972 p42": {"x": 1296, "y": 972, 'fps': 42},
+                    "2592 x 1944 p15": {"x": 2592, "y": 1944, 'fps': 15}};
+
 function handleNewFrame() {
     frameCount++;
     console.log("Новый кадр получен");
     document.getElementById('frame').appendChild(img);
 }
+
+let resolution = [640, 480];
 
 function drawPoints(coords, states) {
     const container = document.getElementById('frame');
@@ -14,8 +21,8 @@ function drawPoints(coords, states) {
         pts_old[0].parentNode.removeChild(pts_old[0]);
     }
 
-    const scaleFactorX = container.offsetWidth / 320;
-    const scaleFactorY = container.offsetHeight / 240;
+    const scaleFactorX = container.offsetWidth / resolution[0];
+    const scaleFactorY = container.offsetHeight / resolution[1];
 
     coords.forEach((coord, index) => {
         const point = document.createElement('div');
@@ -30,11 +37,11 @@ function drawPoints(coords, states) {
 img.onload = handleNewFrame;
 img.src = "/stream";
 
-const eventsource = new EventSource("/stream_json");
-eventsource.onmessage = function (event) {
-    let msg = JSON.parse(event.data);
-    drawPoints(msg.cords, msg.states);
-}
+// const eventsource = new EventSource("/stream_json");
+// eventsource.onmessage = function (event) {
+//     let msg = JSON.parse(event.data);
+//     drawPoints(msg.cords, msg.states);
+// }
 
 function toggleSettings() {
     let serverSettings = document.getElementById('serverSettings');
@@ -61,6 +68,10 @@ function getConfig() {
             document.getElementById('enter_zone_part').value = data.camera.enter_zone_part;
             document.getElementById('end_zone_part').value = data.camera.end_zone_part;
             document.getElementById('horizontal').checked = data.camera.horizontal;
+            resolution = data.camera.resolution;
+            const fps  = data.camera.fps;
+
+            document.getElementById('resolution').value = String(resolution[0]) + ' x ' +  String(resolution[1]) + ' p' + String(fps);
 
             const cropLeftValue = parseFloat(data.camera.crop[0]);
             const cropRightValue = parseFloat(data.camera.crop[1]);
@@ -89,6 +100,10 @@ function getConfig() {
         });
 }
 
+document.addEventListener('DOMContentLoaded', function() {
+    toggleSettings();
+    getConfig();
+  });
 document.querySelector('.settingsButton').addEventListener('click', getConfig);
 
 function applySettings() {
@@ -105,6 +120,10 @@ function applySettings() {
     const end_zone_part = document.getElementById('end_zone_part').value.trim();
     const horizontal = document.getElementById('horizontal').checked;
     const crop = collectCropData();
+    const resolution_key = document.getElementById('resolution').value.trim();
+
+    resolution = [resolutions[resolution_key]['x'], resolutions[resolution_key]['y']];
+    const fps = resolutions[resolution_key]['fps'];
 
     if (FarmId === '' || LineId === '' || Host === '' || Port === '' || analogueGain === '' || ExposureTime === '' || enter_zone_part === '' || end_zone_part === '' || horizontal === '' || !crop) {
         alert('Пожалуйста, заполните все поля');
@@ -126,7 +145,9 @@ function applySettings() {
             enter_zone_part: parseFloat(enter_zone_part),
             hflip: hflip,
             horizontal: horizontal,
-            vflip: vflip
+            vflip: vflip,
+            resolution: resolution,
+            fps: parseInt(fps)
         },
         device: {
             FarmId: FarmId,
@@ -265,3 +286,26 @@ function updateCropInputValues() {
 
 updateCropInputValues();
 
+function disconnect() {
+    const jsonData = JSON.stringify('Disconnect');
+
+    fetch('/disconnect', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: jsonData
+    })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Ошибка при отключении');
+            }
+            console.log('Успешно разъединено');
+        })
+        .catch(error => {
+            console.error('Ошибка при отключении:', error);
+        });
+    // setTimeout(function () {
+    //     window.location.reload(true);
+    // }, 1000);
+}

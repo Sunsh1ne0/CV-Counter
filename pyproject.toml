@@ -1,0 +1,24 @@
+[tool.poetry]
+name = "eggcounter"
+version = "0.1.0"
+description = ""
+authors = ["Sergey Bakulin"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.111.0"
+uvicorn = "^0.30.1"
+opencv-python = "^4.10.0.84"
+ultralytics = "^8.2.42"
+picamera2 = "^0.3.18"
+rpi-libcamera = "^0.1a5"
+rpi-kms = "^0.1a1"
+pika = "^1.3.2"
+tensorflow = "^2.16.1"
+lapx = "^0.5.9.post1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
